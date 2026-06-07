@@ -34,6 +34,45 @@
       <div class="context-pills" id="context-pills"></div>
     </div>
 
+    <!-- Clarification picker -->
+    <div class="clarify-card hidden" id="clarify-card">
+      <div class="bubble-label">DRISHTI ASKS</div>
+      <p class="clarify-title">"To read your chart well, I need to know what area of life matters most to you right now."</p>
+      <p class="clarify-sub">Which of these feels most pressing?</p>
+      <div class="clarify-options">
+        <button class="clarify-btn" onclick="selectDomain('career')">
+          <span class="clarify-btn-icon">♄</span>
+          <span class="clarify-btn-title">Career & Purpose</span>
+          <span class="clarify-btn-desc">Work, ambition, direction</span>
+        </button>
+        <button class="clarify-btn" onclick="selectDomain('relationships')">
+          <span class="clarify-btn-icon">♀</span>
+          <span class="clarify-btn-title">Love & Relationships</span>
+          <span class="clarify-btn-desc">Romance, partnership, family</span>
+        </button>
+        <button class="clarify-btn" onclick="selectDomain('wealth')">
+          <span class="clarify-btn-icon">♃</span>
+          <span class="clarify-btn-title">Money & Wealth</span>
+          <span class="clarify-btn-desc">Finances, investment, security</span>
+        </button>
+        <button class="clarify-btn" onclick="selectDomain('timing')">
+          <span class="clarify-btn-icon">☽</span>
+          <span class="clarify-btn-title">Timing & Energy</span>
+          <span class="clarify-btn-desc">Best periods, windows, cycles</span>
+        </button>
+        <button class="clarify-btn" onclick="selectDomain('health')">
+          <span class="clarify-btn-icon">☀</span>
+          <span class="clarify-btn-title">Health & Vitality</span>
+          <span class="clarify-btn-desc">Body, energy, wellbeing</span>
+        </button>
+        <button class="clarify-btn" onclick="selectDomain('general')">
+          <span class="clarify-btn-icon">✦</span>
+          <span class="clarify-btn-title">General Reading</span>
+          <span class="clarify-btn-desc">Show me everything</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Loading -->
     <div class="chat-bubble assistant loading" id="loading-bubble">
       <div class="bubble-label">DRISHTI</div>

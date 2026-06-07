@@ -172,7 +172,7 @@ def format_transit_context(transit_result):
         return "TODAY'S TRANSITS (current sky):\n" + "\n".join(lines)
     return ""
 
-def build_agent_prompt(agent_type, name, situation, question, timeline, vedic_context, transit_context):
+def build_agent_prompt(agent_type, name, situation, question, timeline, vedic_context, transit_context, preference='plain'):
     agent_configs = {
         "career": {
             "title": "Career & Purpose Agent",
@@ -198,6 +198,20 @@ def build_agent_prompt(agent_type, name, situation, question, timeline, vedic_co
 
     config = agent_configs[agent_type]
     transit_section = f"\n\n{transit_context}" if transit_context else ""
+
+    if preference == 'plain':
+        language_rule = """
+LANGUAGE: Plain & Personal mode.
+Never use Vedic jargon. Translate everything to plain English:
+- "sub-period" not "Antardasha", "main period" not "Mahadasha"
+- "minor cycle" not "Pratyantar", "career house" not "H10"
+- "at full strength" not "exalted", "weakened by Sun" not "combust"
+- "challenging house" not "dusthana", "soul planet" not "Atmakaraka"
+Write warmly, like explaining to a smart friend."""
+    else:
+        language_rule = """
+LANGUAGE: Vedic & Technical mode.
+Use full Vedic terminology — dashas, nakshatras, house numbers, yogas, dignities."""
 
     return f"""You are the {config['title']} — a specialist Vedic astrologer who reads only through the lens of {config['domain']}.
 
@@ -229,6 +243,8 @@ Respond in this exact JSON:
   "advice": "One concrete action this person should take based on their chart"
 }}
 
+{language_rule}
+
 Rules:
 - Score must be justified by actual chart factors
 - Every signal must name a specific planet, house, nakshatra, or dasha
@@ -237,7 +253,7 @@ Rules:
 - Do not mention Western astrology
 - Do not break JSON structure"""
 
-def build_synthesis_prompt(name, situation, question, timeline, agent_results):
+def build_synthesis_prompt(name, situation, question, timeline, agent_results, preference='plain'):
     agents_text = ""
     for agent in agent_results:
         agents_text += f"\n{agent['domain'].upper()} AGENT (score: {agent['score']}):\n"
@@ -245,40 +261,71 @@ def build_synthesis_prompt(name, situation, question, timeline, agent_results):
         agents_text += f"Timing: {agent['timing']}\n"
         agents_text += f"Advice: {agent['advice']}\n"
 
-    return f"""You are the Drishti Synthesis Oracle — you read the outputs of 4 specialist Vedic astrology agents and synthesize them into a unified life reading.
+    if preference == 'plain':
+        language_instruction = """LANGUAGE RULES (Plain & Personal mode):
+- Open with "{name}, let me tell you what I see here."
+- Write as a warm, direct astrologer speaking to a friend
+- NEVER use Vedic terms — translate everything:
+  * "sub-period" not "Antardasha"
+  * "main period" not "Mahadasha"  
+  * "minor cycle" not "Pratyantar"
+  * "your career house" not "H10"
+  * "at full strength" not "exalted"
+  * "weakened by the Sun" not "combust"
+  * "Saturn's 7-year test" not "Sade Sati"
+  * "challenging house" not "dusthana"
+  * "soul planet" not "Atmakaraka"
+  * "relationship planet" not "Darakaraka"
+  * "wealth combination" not "Dhana Yoga"
+  * "success combination" not "Raja Yoga"
+  * "lunar mansion" not "nakshatra"
+- Use months and plain time references not dasha codes
+- Make the person feel heard and understood
+- Sound like you genuinely care about their situation""".replace("{name}", name)
+    else:
+        language_instruction = """LANGUAGE RULES (Vedic & Technical mode):
+- Use full Vedic terminology throughout
+- Reference specific houses (H1-H12), dashas, nakshatras
+- Name specific yogas, dignities, combustion states
+- Include dasha path codes and exact period dates
+- Be precise and technically accurate"""
+
+    return f"""You are Drishti — a warm, brilliant Vedic astrologer who speaks like a trusted advisor, not a textbook.
+
+You have received reports from 4 specialist agents who have each read {name}'s chart.
+Your job is to synthesize them into one unified consultation — the way a master astrologer 
+would speak directly to this person.
 
 PERSON: {name}
+SITUATION: {situation}
+QUESTION: {question}  
+TIMELINE: {timeline}
 
-THEIR CONTEXT:
-- Situation: {situation}
-- Question: {question}
-- Timeline: {timeline}
-
-SPECIALIST AGENT REPORTS:
+SPECIALIST REPORTS:
 {agents_text}
 
-Your job: synthesize these 4 domain readings into one coherent life picture. Find the convergences, tensions, and the single most important message this person needs to hear right now.
+{language_instruction}
 
 Respond in this exact JSON:
 {{
-  "overall_score": <integer 0-100, weighted average reflecting the whole life picture>,
-  "synthesis": "2-3 sentences — the unified verdict that weaves all domains together",
-  "convergence": "The one theme that appears across multiple domains",
-  "tension": "The key tension or trade-off the chart reveals",
-  "oracle_note": "One poetic but grounded sentence of Vedic wisdom for this person right now",
-  "top_action": "The single most important thing this person should do in their timeline",
+  "overall_score": <0-100>,
+  "synthesis": "3-4 sentences in consultation voice — open with '{name}, let me tell you what I see here.' Then the core message. Then what matters most.",
+  "convergence": "One sentence — the theme appearing across all domains, in plain language",
+  "tension": "One sentence — the key tension or trade-off, in plain language",
+  "oracle_note": "One poetic but grounded sentence of wisdom for this person",
+  "top_action": "The single most important thing they should do — specific and actionable",
   "followup_questions": [
-    "A natural next question about career or purpose",
-    "A natural next question about relationships or timing",
-    "A natural next question about a specific decision"
+    "A natural next question about their primary concern",
+    "An angle they haven't considered",
+    "A timing or decision question"
   ]
 }}
 
 Rules:
-- Synthesize — do not just repeat what agents said
-- Find meaning in the combination of scores and signals
-- oracle_note should feel like ancient wisdom applied to their modern situation
-- Do not mention Western astrology
+- synthesis MUST open with addressing {name} directly by name
+- Every sentence must feel like it was written for this specific person
+- oracle_note should feel ancient but immediately relevant
+- top_action must be concrete — a real thing they can do this week
 - Do not break JSON structure"""
 
 def detect_chart_type(question, situation=""):
@@ -341,9 +388,9 @@ Rules:
 - Plain language descriptions — no jargon
 - Do not break JSON"""
 
-def call_agent(agent_type, name, situation, question, timeline, vedic_context, transit_context):
+def call_agent(agent_type, name, situation, question, timeline, vedic_context, transit_context, preference='plain'):
     try:
-        prompt = build_agent_prompt(agent_type, name, situation, question, timeline, vedic_context, transit_context)
+        prompt = build_agent_prompt(agent_type, name, situation, question, timeline, vedic_context, transit_context, preference)
         message = client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=800,
@@ -448,6 +495,7 @@ def ask_v2():
     vedic_context = vedic_result.get("karmi_prompt_context") or str(vedic_result)
     transit_result = get_today_transits()
     transit_context = format_transit_context(transit_result)
+    preference = data.get("preference", "plain")
 
     # Step 2: Run 4 agents in parallel
     agent_types = ["career", "relationships", "wealth", "timing"]
@@ -456,7 +504,7 @@ def ask_v2():
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {
             executor.submit(
-                call_agent, agent_type, name, situation, question, timeline, vedic_context, transit_context
+                call_agent, agent_type, name, situation, question, timeline, vedic_context, transit_context, preference
             ): agent_type
             for agent_type in agent_types
         }
@@ -502,7 +550,8 @@ def ask_v2():
 
     # Step 3: Synthesis
     try:
-        synthesis_prompt = build_synthesis_prompt(name, situation, question, timeline, agent_results)
+        preference = data.get("preference", "plain")
+        synthesis_prompt = build_synthesis_prompt(name, situation, question, timeline, agent_results, preference)
         message = client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=1024,

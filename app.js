@@ -1,5 +1,27 @@
 const API = 'https://drishti-6n6f.onrender.com';
 
+let readingPreference = 'plain';
+
+function setReadingPref(pref, btn) {
+  readingPreference = pref;
+  document.querySelectorAll('.pref-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+const AMBIGUOUS_TRIGGERS = [
+  'feeling lost', 'dont know', "don't know", 'what should i do',
+  'help me', 'confused', 'not sure', 'general reading',
+  'overall', 'everything', 'life in general', 'tell me about myself',
+  'what do you see', 'read my chart', 'general', 'anything',
+  'lost', 'stuck', 'clarity', 'direction', 'guidance'
+];
+
+function isAmbiguous(question, situation) {
+  const text = (question + ' ' + situation).toLowerCase().trim();
+  if (text.length < 20) return true;
+  return AMBIGUOUS_TRIGGERS.some(trigger => text.includes(trigger));
+}
+
 // ── City Lookup ──
 let resolvedLat = null;
 let resolvedLon = null;
@@ -116,11 +138,26 @@ async function submitV2() {
     return;
   }
 
+  // Check for ambiguous question
+  if (isAmbiguous(question, situation || '')) {
+    sessionStorage.setItem('drishti_data', JSON.stringify({
+      name, dob, tob, place,
+      lat: resolvedLat, lon: resolvedLon, timezone: resolvedTimezone,
+      situation: situation || '', question, timeline: timeline || '',
+      preference: readingPreference,
+      mode: 'v2',
+      needs_clarification: true
+    }));
+    window.location.href = 'chat.html';
+    return;
+  }
+
   sessionStorage.setItem('drishti_data', JSON.stringify({
     name, dob, tob, place,
     lat: resolvedLat, lon: resolvedLon, timezone: resolvedTimezone,
     situation: situation || '', question, timeline: timeline || '',
-    mode: 'v2'
+    mode: 'v2',
+    preference: readingPreference
   }));
 
   window.location.href = 'chat.html';
@@ -143,7 +180,39 @@ async function loadReading() {
     pillsEl.innerHTML = pills;
   }
 
+  // Show clarification picker if needed
+  if (data.needs_clarification) {
+    document.getElementById('clarify-card')?.classList.remove('hidden');
+    return;
+  }
+
   await runV2Pipeline(data);
+}
+
+function selectDomain(domain) {
+  const raw = sessionStorage.getItem('drishti_data');
+  if (!raw) return;
+  const data = JSON.parse(raw);
+  
+  // Update question with domain context
+  const domainQuestions = {
+    career:        'What does my chart say about my career and purpose right now?',
+    relationships: 'What does my chart say about love and relationships right now?',
+    wealth:        'What does my chart say about money and wealth right now?',
+    timing:        'What are my best periods and energy windows coming up?',
+    health:        'What does my chart say about my health and vitality?',
+    general:       'Give me a complete reading across all life areas right now.'
+  };
+  
+  data.question = domainQuestions[domain] || data.question;
+  data.needs_clarification = false;
+  sessionStorage.setItem('drishti_data', JSON.stringify(data));
+  
+  // Hide clarifier, show loading
+  document.getElementById('clarify-card')?.classList.add('hidden');
+  document.getElementById('loading-bubble')?.classList.remove('hidden');
+  
+  runV2Pipeline(data);
 }
 
 async function runV2Pipeline(data) {
