@@ -329,10 +329,10 @@ Respond in exact JSON:
   "communication": <0-100>,
   "longevity": <0-100>,
   "karma": <0-100>,
-  "attraction_desc": "One sentence plain language",
-  "communication_desc": "One sentence plain language",
-  "longevity_desc": "One sentence plain language",
-  "karma_desc": "One sentence plain language",
+  "attraction_desc": "Max 8 words — one punchy phrase only",
+  "communication_desc": "Max 8 words — one punchy phrase only",
+  "longevity_desc": "Max 8 words — one punchy phrase only",
+  "karma_desc": "Max 8 words — one punchy phrase only",
   "readiness_summary": "Two sentences — overall relationship readiness right now"
 }}
 

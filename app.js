@@ -716,12 +716,13 @@ function renderRiverChart(months, domain) {
       },
       scales: {
         y: {
-          min: 0, max: 100,
+          min: Math.max(0, Math.min(...scores) - 15),
+          max: Math.min(100, Math.max(...scores) + 15),
           grid: { color: 'rgba(255,255,255,0.05)' },
           ticks: {
             color: 'rgba(240,235,224,0.4)',
             font: { size: 10 },
-            callback: v => v === 70 ? '▲ favorable' : v === 50 ? '~ mixed' : v === 30 ? '▼ low' : ''
+            callback: v => v + '/100'
           }
         },
         x: {

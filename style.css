@@ -570,11 +570,12 @@ footer a { color: var(--gold); text-decoration: none; }
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  gap: 2px;
+  gap: 3px;
   height: 280px;
-  border: 1px solid var(--card-border);
+  background: rgba(255,255,255,0.05);
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
+  padding: 3px;
 }
 
 .matrix-quadrant {
@@ -584,14 +585,21 @@ footer a { color: var(--gold); text-decoration: none; }
   justify-content: center;
   align-items: center;
   text-align: center;
-  background: rgba(255,255,255,0.02);
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
   transition: background 0.3s;
+  position: relative;
 }
 
 .matrix-quadrant.highlighted {
   background: var(--gold-dim);
-  border: 1px solid rgba(201,168,76,0.3);
+  border: 1px solid rgba(201,168,76,0.4);
 }
+
+.q-tr { border-top-right-radius: 8px; }
+.q-tl { border-top-left-radius: 8px; }
+.q-bl { border-bottom-left-radius: 8px; }
+.q-br { border-bottom-right-radius: 8px; }
 
 .q-label {
   font-size: 13px;
