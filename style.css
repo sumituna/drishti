@@ -1107,3 +1107,18 @@ footer a { color: var(--gold); text-decoration: none; }
   .powered-by-grid { grid-template-columns: 1fr; }
   .karmi-full-cta { padding: 32px 24px; }
 }
+
+/* ── Landing Hero (centered) ── */
+.landing-hero {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 40px 40px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Fix v2-right alignment to match form card */
+.v2-right {
+  padding-top: 0 !important;
+}
