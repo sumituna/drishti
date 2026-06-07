@@ -254,6 +254,8 @@ function showV2Reading(result) {
   }
 
   setTimeout(() => document.getElementById('limit-card')?.classList.remove('hidden'), 1000);
+
+  loadYearAhead(JSON.parse(sessionStorage.getItem('drishti_data')));
 }
 
 function showError(msg) {
@@ -262,4 +264,214 @@ function showError(msg) {
   errDiv.className = 'chat-bubble';
   errDiv.innerHTML = `<div class="bubble-label">DRISHTI</div><p style="color:#ff6b6b;font-size:14px;">${msg}</p>`;
   document.querySelector('.chat-main')?.appendChild(errDiv);
+}
+
+// ── Charts ──
+let timelineChartInstance = null;
+let radarChartInstance = null;
+let currentDomain = 'career';
+let monthlyData = null;
+let vedicDetailData = null;
+
+const DOMAIN_COLORS = {
+  career:       { line: '#C9A84C', fill: 'rgba(201,168,76,0.15)' },
+  wealth:       { line: '#3D9E8C', fill: 'rgba(61,158,140,0.15)' },
+  relationship: { line: '#E87C6B', fill: 'rgba(232,124,107,0.15)' },
+  health:       { line: '#7B9E87', fill: 'rgba(123,158,135,0.15)' }
+};
+
+async function loadYearAhead(data) {
+  try {
+    const response = await fetch(`${API}/year-ahead`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: data.name,
+        date: data.dob,
+        time: data.tob,
+        lat: data.lat,
+        lon: data.lon,
+        timezone: data.timezone
+      })
+    });
+
+    const result = await response.json();
+    if (!result.success) return;
+
+    monthlyData = result.months;
+    vedicDetailData = result.year_context;
+
+    // Show narrative
+    const narEl = document.getElementById('chart-narrative');
+    if (narEl && result.narrative) {
+      narEl.textContent = result.narrative.year_narrative;
+    }
+
+    // Show peak/low badges
+    const peakEl = document.getElementById('chart-peak-info');
+    if (peakEl && result.narrative) {
+      peakEl.innerHTML = `
+        <span class="peak-badge">⬆ Peak: ${result.narrative.peak_window}</span>
+        <span class="low-badge">⬇ Watch: ${result.narrative.low_window}</span>
+      `;
+    }
+
+    // Show vedic detail
+    const vedicEl = document.getElementById('vedic-detail');
+    if (vedicEl) vedicEl.textContent = result.year_context;
+
+    renderTimelineChart(monthlyData, currentDomain);
+    renderRadarChart(monthlyData);
+
+    document.getElementById('charts-section')?.classList.remove('hidden');
+
+  } catch (err) {
+    console.error('Year ahead failed:', err);
+  }
+}
+
+function renderTimelineChart(months, domain) {
+  const ctx = document.getElementById('timelineChart');
+  if (!ctx) return;
+
+  const labels = months.map(m => m.month_label);
+  const scores = months.map(m => m.scores[domain] || 0);
+  const colors = DOMAIN_COLORS[domain] || DOMAIN_COLORS.career;
+
+  if (timelineChartInstance) timelineChartInstance.destroy();
+
+  timelineChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: domain.charAt(0).toUpperCase() + domain.slice(1),
+        data: scores,
+        borderColor: colors.line,
+        backgroundColor: colors.fill,
+        borderWidth: 2,
+        pointBackgroundColor: scores.map(s =>
+          s >= 70 ? '#3D9E8C' : s >= 50 ? '#C9A84C' : '#ff8c69'
+        ),
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0D0D2B',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#F0EBE0',
+          bodyColor: 'rgba(240,235,224,0.7)',
+          callbacks: {
+            label: (ctx) => {
+              const score = ctx.parsed.y;
+              const band = score >= 70 ? 'Favorable' : score >= 50 ? 'Mixed' : 'Challenging';
+              return `${score}/100 — ${band}`;
+            },
+            afterLabel: (ctx) => {
+              const month = months[ctx.dataIndex];
+              return `Dasha: ${month.dasha_path}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          min: 0, max: 100,
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: {
+            color: 'rgba(240,235,224,0.4)',
+            font: { size: 10 },
+            callback: v => v >= 70 ? '▲ ' + v : v >= 50 ? '~ ' + v : '▼ ' + v
+          }
+        },
+        x: {
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: 'rgba(240,235,224,0.5)', font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+function renderRadarChart(months) {
+  const ctx = document.getElementById('radarChart');
+  if (!ctx || !months.length) return;
+
+  // Use average of first 3 months as "current" snapshot
+  const domains = ['career', 'wealth', 'relationship', 'health', 'spirituality', 'travel'];
+  const labels = ['Career', 'Wealth', 'Relationships', 'Health', 'Spirituality', 'Travel'];
+
+  const scores = domains.map(d => {
+    const avg = months.slice(0, 3).reduce((sum, m) => sum + (m.scores[d] || 0), 0) / 3;
+    return Math.round(avg);
+  });
+
+  if (radarChartInstance) radarChartInstance.destroy();
+
+  radarChartInstance = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Your Chart Now',
+        data: scores,
+        borderColor: '#C9A84C',
+        backgroundColor: 'rgba(201,168,76,0.12)',
+        borderWidth: 2,
+        pointBackgroundColor: '#C9A84C',
+        pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0D0D2B',
+          titleColor: '#F0EBE0',
+          bodyColor: 'rgba(240,235,224,0.7)'
+        }
+      },
+      scales: {
+        r: {
+          min: 0, max: 100,
+          grid: { color: 'rgba(255,255,255,0.08)' },
+          angleLines: { color: 'rgba(255,255,255,0.08)' },
+          pointLabels: {
+            color: 'rgba(240,235,224,0.6)',
+            font: { size: 11, family: 'Inter' }
+          },
+          ticks: { display: false }
+        }
+      }
+    }
+  });
+}
+
+function toggleDomain(domain, btn) {
+  currentDomain = domain;
+  document.querySelectorAll('.dtoggle').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (monthlyData) renderTimelineChart(monthlyData, domain);
+}
+
+function toggleVedicMode(checkbox) {
+  const vedicEl = document.getElementById('vedic-detail');
+  if (vedicEl) {
+    if (checkbox.checked) {
+      vedicEl.classList.remove('hidden');
+    } else {
+      vedicEl.classList.add('hidden');
+    }
+  }
 }

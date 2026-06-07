@@ -47,6 +47,114 @@ def get_today_transits():
     except Exception as e:
         return {"error": str(e)}
 
+def get_year_ahead(birth_data):
+    try:
+        date_str = birth_data.get("date", "")
+        time_str = birth_data.get("time", "00:00")
+        year, month, day = [int(x) for x in date_str.split("-")]
+        hour, minute = [int(x) for x in time_str.split(":")]
+
+        payload = {
+            "year": year, "month": month, "day": day,
+            "hour": hour, "minute": minute,
+            "lat": float(birth_data.get("lat", 28.6139)),
+            "lon": float(birth_data.get("lon", 77.209)),
+            "utc_offset": float(birth_data.get("utc_offset", 5.5))
+        }
+
+        response = requests.post(
+            f"{NGROK_URL}/api/year-ahead",
+            json=payload,
+            timeout=60
+        )
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        return {"error": str(e)}
+
+def build_year_context(months):
+    """Build a month-by-month score table for Claude's prompt"""
+    if not months:
+        return ""
+    lines = ["YEAR AHEAD — MONTHLY DOMAIN SCORES:"]
+    for m in months:
+        scores = m.get('scores', {})
+        career = scores.get('career', 0)
+        wealth = scores.get('wealth', 0)
+        rel = scores.get('relationship', 0)
+        health = scores.get('health', 0)
+        lines.append(
+            f"{m['month_label']}: Career {career} · Wealth {wealth} · "
+            f"Relationships {rel} · Health {health} · "
+            f"Dasha: {m['dasha_path']} · Tone: {m['transit_tone']}"
+        )
+    return "\n".join(lines)
+
+@app.route("/year-ahead", methods=["POST"])
+def year_ahead():
+    data = request.json
+    birth_data = {
+        "date": data.get("date"),
+        "time": data.get("time"),
+        "lat": data.get("lat"),
+        "lon": data.get("lon"),
+        "utc_offset": data.get("timezone")
+    }
+
+    result = get_year_ahead(birth_data)
+
+    if "error" in result:
+        return jsonify({"error": result["error"]}), 500
+
+    months = result.get("months", [])
+
+    # Also ask Claude to narrate the year
+    year_context = build_year_context(months)
+    name = data.get("name", "Seeker")
+
+    try:
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=600,
+            messages=[{
+                "role": "user",
+                "content": f"""You are Drishti — a Vedic oracle. Based on these month-by-month domain scores, write a 3-sentence year narrative for {name}. Identify the peak window, the low period, and the single most important timing insight. Be specific about months. Do not mention raw numbers — translate them into plain language.
+
+{year_context}
+
+Respond in JSON:
+{{
+  "year_narrative": "3 sentences covering peak, low, and key insight",
+  "peak_window": "e.g. July–September 2026",
+  "peak_domain": "e.g. career",
+  "low_window": "e.g. October–November 2026",
+  "key_insight": "One sentence of Vedic timing wisdom"
+}}"""
+            }]
+        )
+        raw = message.content[0].text
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        import json
+        narrative = json.loads(raw.strip())
+    except Exception as e:
+        narrative = {
+            "year_narrative": "Your year ahead holds distinct phases of growth and consolidation.",
+            "peak_window": "See chart below",
+            "peak_domain": "career",
+            "low_window": "See chart below",
+            "key_insight": "Timing is everything in Vedic astrology."
+        }
+
+    return jsonify({
+        "success": True,
+        "months": months,
+        "narrative": narrative,
+        "year_context": year_context
+    })
+
 def format_transit_context(transit_result):
     if "error" in transit_result:
         return ""

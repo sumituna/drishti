@@ -6,6 +6,7 @@
   <title>Drishti — Your Reading</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="chat-page">
@@ -85,6 +86,45 @@
       <p>Karmi goes deeper — 19 chapters, dasha timeline, life domain coaching, and an AI that travels with you as your chart unfolds.</p>
       <a href="https://karmi.ai" class="karmi-btn">Explore Karmi →</a>
       <button class="ask-again-btn" onclick="window.location.href='index.html'">Ask a new question</button>
+    </div>
+
+    <!-- Year Ahead Charts -->
+    <div class="charts-section hidden" id="charts-section">
+      
+      <div class="chart-card" id="timeline-card">
+        <div class="chart-header">
+          <div class="section-label">YEAR AHEAD</div>
+          <div class="chart-narrative" id="chart-narrative"></div>
+          <div class="chart-peak-info" id="chart-peak-info"></div>
+        </div>
+        <div class="domain-toggle">
+          <button class="dtoggle active" onclick="toggleDomain('career', this)">Career</button>
+          <button class="dtoggle" onclick="toggleDomain('wealth', this)">Wealth</button>
+          <button class="dtoggle" onclick="toggleDomain('relationship', this)">Relationships</button>
+          <button class="dtoggle" onclick="toggleDomain('health', this)">Health</button>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="timelineChart"></canvas>
+        </div>
+        <div class="plain-toggle-row">
+          <span class="plain-label">Plain language</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="vedic-toggle" onchange="toggleVedicMode(this)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="plain-label">Vedic detail</span>
+        </div>
+        <div class="vedic-detail hidden" id="vedic-detail"></div>
+      </div>
+
+      <div class="chart-card" id="radar-card">
+        <div class="section-label">LIFE DOMAINS NOW</div>
+        <p class="chart-sub">Your current cosmic fingerprint across all life areas.</p>
+        <div class="chart-wrap chart-wrap-radar">
+          <canvas id="radarChart"></canvas>
+        </div>
+      </div>
+
     </div>
 
   </main>
