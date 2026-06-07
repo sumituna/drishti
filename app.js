@@ -227,17 +227,20 @@ function showV2Reading(result) {
     const agentTitles = { career: 'Career & Purpose', relationships: 'Relationships', wealth: 'Wealth & Resources', timing: 'Timing & Energy' };
     agents2x2.innerHTML = agents.map(agent => `
       <div class="agent-result-card">
-        <div class="agent-result-header">
+        <div class="agent-result-header" onclick="toggleAgentCard(this)" style="cursor:pointer;">
           <span class="agent-result-icon">${agentIcons[agent.domain] || '✦'}</span>
           <span class="agent-result-title">${agentTitles[agent.domain] || agent.domain}</span>
           <span class="agent-score ${agent.score >= 70 ? 'score-high' : agent.score >= 50 ? 'score-mid' : 'score-low'}">${agent.score}%</span>
+          <span class="agent-expand-icon">+</span>
         </div>
         <p class="agent-verdict">${agent.verdict}</p>
-        <ul class="agent-signals">
-          ${agent.signals.map(s => `<li>${s}</li>`).join('')}
-        </ul>
-        <div class="agent-timing">⏱ ${agent.timing}</div>
-        <div class="agent-advice">→ ${agent.advice}</div>
+        <div class="agent-detail hidden">
+          <ul class="agent-signals">
+            ${agent.signals.map(s => `<li>${s}</li>`).join('')}
+          </ul>
+          <div class="agent-timing">⏱ ${agent.timing}</div>
+          <div class="agent-advice">→ ${agent.advice}</div>
+        </div>
       </div>
     `).join('');
     agentGrid.classList.remove('hidden');
@@ -473,5 +476,14 @@ function toggleVedicMode(checkbox) {
     } else {
       vedicEl.classList.add('hidden');
     }
+  }
+}
+
+function toggleAgentCard(header) {
+  const detail = header.parentElement.querySelector('.agent-detail');
+  const icon = header.querySelector('.agent-expand-icon');
+  if (detail) {
+    detail.classList.toggle('hidden');
+    if (icon) icon.textContent = detail.classList.contains('hidden') ? '+' : '−';
   }
 }

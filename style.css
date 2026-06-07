@@ -400,3 +400,10 @@ footer a { color: var(--gold); text-decoration: none; }
   font-family: var(--serif);
   font-style: italic;
 }
+
+.agent-expand-icon {
+  font-size: 16px;
+  color: var(--text-dim);
+  margin-left: auto;
+  flex-shrink: 0;
+}
