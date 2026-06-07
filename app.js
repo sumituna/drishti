@@ -1,4 +1,4 @@
-const API = 'http://localhost:5051';
+const API = 'https://drishti-6n6f.onrender.com';
 
 // ── City Lookup ──
 let resolvedLat = null;
