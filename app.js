@@ -180,13 +180,29 @@ async function loadReading() {
     pillsEl.innerHTML = pills;
   }
 
-  // Show clarification picker if needed
+  // Always show preference picker first
+  document.getElementById('pref-picker-card')?.classList.remove('hidden');
+}
+
+function selectPreference(pref) {
+  const raw = sessionStorage.getItem('drishti_data');
+  if (!raw) return;
+  const data = JSON.parse(raw);
+  data.preference = pref;
+  sessionStorage.setItem('drishti_data', JSON.stringify(data));
+
+  // Hide preference picker
+  document.getElementById('pref-picker-card')?.classList.add('hidden');
+
+  // Check if ambiguous question needs clarification
   if (data.needs_clarification) {
     document.getElementById('clarify-card')?.classList.remove('hidden');
     return;
   }
 
-  await runV2Pipeline(data);
+  // Show loading and start pipeline
+  document.getElementById('loading-bubble')?.classList.remove('hidden');
+  runV2Pipeline(data);
 }
 
 function selectDomain(domain) {

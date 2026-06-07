@@ -1143,3 +1143,70 @@ footer a { color: var(--gold); text-decoration: none; }
 .v2-right {
   padding-top: 0 !important;
 }
+
+/* ── Preference Picker Card ── */
+.pref-picker-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 28px;
+  backdrop-filter: blur(12px);
+}
+
+.pref-picker-title {
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--text);
+  line-height: 1.4;
+  margin-bottom: 20px;
+}
+
+.pref-picker-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pref-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--sans);
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.pref-picker-btn:hover {
+  border-color: var(--gold);
+  background: var(--gold-dim);
+}
+
+.pref-picker-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.pref-picker-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pref-picker-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.pref-picker-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}

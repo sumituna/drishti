@@ -34,6 +34,28 @@
       <div class="context-pills" id="context-pills"></div>
     </div>
 
+    <!-- Preference picker -->
+    <div class="pref-picker-card hidden" id="pref-picker-card">
+      <div class="bubble-label">DRISHTI ASKS</div>
+      <p class="pref-picker-title">"Before I read your chart — how would you like your answer?"</p>
+      <div class="pref-picker-options">
+        <button class="pref-picker-btn" onclick="selectPreference('plain')">
+          <span class="pref-picker-icon">🌙</span>
+          <div class="pref-picker-text">
+            <span class="pref-picker-name">Plain & Personal</span>
+            <span class="pref-picker-desc">Clear language, no jargon — like an astrologer speaking to a friend</span>
+          </div>
+        </button>
+        <button class="pref-picker-btn" onclick="selectPreference('vedic')">
+          <span class="pref-picker-icon">☿</span>
+          <div class="pref-picker-text">
+            <span class="pref-picker-name">Vedic & Technical</span>
+            <span class="pref-picker-desc">Full terminology — dashas, nakshatras, house numbers, yogas</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
     <!-- Clarification picker -->
     <div class="clarify-card hidden" id="clarify-card">
       <div class="bubble-label">DRISHTI ASKS</div>
