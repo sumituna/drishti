@@ -169,6 +169,99 @@
         </div>
       </div>
 
+  <!-- Decision Matrix -->
+  <div class="chart-card hidden" id="decision-matrix-card">
+    <div class="section-label">YOUR DECISION</div>
+    <p class="chart-sub" id="decision-sub">Based on your chart's timing and potential scores.</p>
+    <div class="decision-matrix-wrap">
+      <div class="matrix-grid">
+        <div class="matrix-quadrant q-tl">
+          <div class="q-label">Wait & Watch</div>
+          <div class="q-desc">Timing weak, potential strong — prepare now, act later</div>
+        </div>
+        <div class="matrix-quadrant q-tr">
+          <div class="q-label">Strike Now</div>
+          <div class="q-desc">Both timing and potential align — move decisively</div>
+        </div>
+        <div class="matrix-quadrant q-bl">
+          <div class="q-label">Pass for Now</div>
+          <div class="q-desc">Neither timing nor potential favor this — reconsider</div>
+        </div>
+        <div class="matrix-quadrant q-br">
+          <div class="q-label">Build First</div>
+          <div class="q-desc">Good potential but timing off — strengthen foundations</div>
+        </div>
+        <div class="matrix-axes">
+          <div class="axis-x">POTENTIAL →</div>
+          <div class="axis-y">↑ TIMING</div>
+        </div>
+        <div class="matrix-dot" id="matrix-dot"></div>
+        <div class="matrix-dot-label" id="matrix-dot-label"></div>
+      </div>
+    </div>
+    <div class="decision-verdict" id="decision-verdict"></div>
+  </div>
+
+  <!-- Dasha River -->
+  <div class="chart-card hidden" id="dasha-river-card">
+    <div class="section-label">DASHA RIVER</div>
+    <p class="chart-sub">Your planetary periods as a river of time — hover any point to see what's flowing.</p>
+    <div class="domain-toggle" id="river-domain-toggle">
+      <button class="dtoggle active" onclick="toggleRiverDomain('career', this)">Career</button>
+      <button class="dtoggle" onclick="toggleRiverDomain('wealth', this)">Wealth</button>
+      <button class="dtoggle" onclick="toggleRiverDomain('relationship', this)">Relationships</button>
+      <button class="dtoggle" onclick="toggleRiverDomain('health', this)">Health</button>
+    </div>
+    <div class="chart-wrap" style="height:260px;">
+      <canvas id="dashaRiverChart"></canvas>
+    </div>
+    <div class="dasha-legend" id="dasha-legend"></div>
+  </div>
+
+  <!-- Compatibility Venn -->
+  <div class="chart-card hidden" id="compatibility-venn-card">
+    <div class="section-label">RELATIONSHIP READINESS</div>
+    <p class="chart-sub" id="venn-summary"></p>
+    <div class="venn-grid">
+      <div class="venn-item" id="venn-attraction">
+        <div class="venn-circle-wrap">
+          <canvas class="venn-canvas" id="venn-canvas-attraction" width="120" height="120"></canvas>
+          <div class="venn-score" id="venn-score-attraction"></div>
+        </div>
+        <div class="venn-label">Attraction</div>
+        <div class="venn-desc" id="venn-desc-attraction"></div>
+      </div>
+      <div class="venn-item" id="venn-communication">
+        <div class="venn-circle-wrap">
+          <canvas class="venn-canvas" id="venn-canvas-communication" width="120" height="120"></canvas>
+          <div class="venn-score" id="venn-score-communication"></div>
+        </div>
+        <div class="venn-label">Communication</div>
+        <div class="venn-desc" id="venn-desc-communication"></div>
+      </div>
+      <div class="venn-item" id="venn-longevity">
+        <div class="venn-circle-wrap">
+          <canvas class="venn-canvas" id="venn-canvas-longevity" width="120" height="120"></canvas>
+          <div class="venn-score" id="venn-score-longevity"></div>
+        </div>
+        <div class="venn-label">Longevity</div>
+        <div class="venn-desc" id="venn-desc-longevity"></div>
+      </div>
+      <div class="venn-item" id="venn-karma">
+        <div class="venn-circle-wrap">
+          <canvas class="venn-canvas" id="venn-canvas-karma" width="120" height="120"></canvas>
+          <div class="venn-score" id="venn-score-karma"></div>
+        </div>
+        <div class="venn-label">Karma</div>
+        <div class="venn-desc" id="venn-desc-karma"></div>
+      </div>
+    </div>
+    <div class="venn-cta">
+      <p>Want to check compatibility with a specific person?</p>
+      <button class="venn-match-btn" onclick="triggerModeB()">Match with someone →</button>
+    </div>
+  </div>
+
     </div>
 
     <!-- Follow-up -->

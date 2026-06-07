@@ -288,7 +288,8 @@ function showV2Reading(result) {
 
   setTimeout(() => document.getElementById('limit-card')?.classList.remove('hidden'), 1000);
 
-  loadYearAhead(JSON.parse(sessionStorage.getItem('drishti_data')));
+  const savedData = JSON.parse(sessionStorage.getItem('drishti_data'));
+  loadYearAhead(savedData, result);
 }
 
 function showError(msg) {
@@ -313,7 +314,7 @@ const DOMAIN_COLORS = {
   health:       { line: '#7B9E87', fill: 'rgba(123,158,135,0.15)' }
 };
 
-async function loadYearAhead(data) {
+async function loadYearAhead(data, v2Result) {
   try {
     const response = await fetch(`${API}/year-ahead`, {
       method: 'POST',
@@ -355,6 +356,7 @@ async function loadYearAhead(data) {
 
     renderTimelineChart(monthlyData, currentDomain);
     renderRadarChart(monthlyData);
+    if (v2Result) renderQuestionCharts(v2Result, monthlyData);
 
     document.getElementById('chart-loading')?.classList.add('hidden');
     document.getElementById('charts-section')?.classList.remove('hidden');
@@ -517,4 +519,330 @@ function toggleAgentCard(header) {
     detail.classList.toggle('hidden');
     if (icon) icon.textContent = detail.classList.contains('hidden') ? '+' : '−';
   }
+}
+
+// ── Chart Type Rendering ──
+let dashaRiverInstance = null;
+let currentRiverDomain = 'career';
+
+function renderQuestionCharts(result, monthlyData) {
+  const chartType = result.chart_type;
+  
+  if (chartType === 'decision_matrix') {
+    renderDecisionMatrix(result);
+  } else if (chartType === 'dasha_river') {
+    renderDashaRiver(monthlyData);
+  } else if (chartType === 'compatibility_venn') {
+    renderCompatibilityVenn(result.relationship_subscores);
+  }
+}
+
+// ── Decision Matrix ──
+function renderDecisionMatrix(result) {
+  const agents = result.agents;
+  const synthesis = result.synthesis;
+  
+  // Get timing score and primary domain score
+  const timingAgent = agents.find(a => a.domain === 'timing');
+  const primaryAgent = agents.find(a => a.domain !== 'timing') || agents[0];
+  
+  const timingScore = timingAgent ? timingAgent.score : 50;
+  const potentialScore = primaryAgent ? primaryAgent.score : 50;
+  
+  // Convert scores to position (0-100 → percentage in grid)
+  // x = potential (left=0, right=100)
+  // y = timing (bottom=0, top=100) — inverted for CSS
+  const xPct = potentialScore;
+  const yPct = 100 - timingScore; // invert for CSS top positioning
+  
+  const dot = document.getElementById('matrix-dot');
+  const dotLabel = document.getElementById('matrix-dot-label');
+  
+  if (dot) {
+    dot.style.left = `${xPct}%`;
+    dot.style.top = `${yPct}%`;
+  }
+  
+  if (dotLabel) {
+    dotLabel.style.left = `${xPct}%`;
+    dotLabel.style.top = `${yPct}%`;
+    dotLabel.textContent = 'You are here';
+  }
+  
+  // Determine quadrant and highlight it
+  const isHighPotential = potentialScore >= 50;
+  const isHighTiming = timingScore >= 50;
+  
+  let quadrantId, verdict;
+  if (isHighTiming && isHighPotential) {
+    quadrantId = 'q-tr';
+    verdict = `Your chart shows both strong timing and potential right now — this is a genuine window to act. ${synthesis.top_action}`;
+  } else if (isHighTiming && !isHighPotential) {
+    quadrantId = 'q-tl';
+    verdict = `Timing is opening but underlying potential needs strengthening first. Use this window to prepare — the full opportunity comes when foundations are built. ${synthesis.top_action}`;
+  } else if (!isHighTiming && isHighPotential) {
+    quadrantId = 'q-br';
+    verdict = `Strong underlying potential but timing is working against speed. Build quietly now — the window for action arrives when planetary support shifts. ${synthesis.top_action}`;
+  } else {
+    quadrantId = 'q-bl';
+    verdict = `Neither timing nor planetary potential favor this move right now. This is a season for reflection and preparation, not execution. ${synthesis.top_action}`;
+  }
+  
+  // Highlight correct quadrant
+  document.querySelectorAll('.matrix-quadrant').forEach(q => q.classList.remove('highlighted'));
+  document.querySelector(`.${quadrantId}`)?.classList.add('highlighted');
+  
+  const verdictEl = document.getElementById('decision-verdict');
+  if (verdictEl) verdictEl.textContent = verdict;
+  
+  document.getElementById('decision-matrix-card')?.classList.remove('hidden');
+}
+
+// ── Dasha River ──
+function renderDashaRiver(months) {
+  if (!months || !months.length) return;
+  
+  const card = document.getElementById('dasha-river-card');
+  if (card) card.classList.remove('hidden');
+  
+  renderRiverChart(months, currentRiverDomain);
+  buildDashaLegend(months);
+}
+
+function renderRiverChart(months, domain) {
+  const ctx = document.getElementById('dashaRiverChart');
+  if (!ctx) return;
+  
+  const labels = months.map(m => m.month_label);
+  const scores = months.map(m => m.scores[domain] || 0);
+  
+  // Build dasha period background bands
+  const dashaColors = {
+    'Venus': 'rgba(232,124,107,0.15)',
+    'Sun':   'rgba(201,168,76,0.15)',
+    'Moon':  'rgba(155,142,196,0.15)',
+    'Mars':  'rgba(220,80,80,0.15)',
+    'Rahu':  'rgba(61,158,140,0.15)',
+    'Jupiter': 'rgba(123,158,135,0.15)',
+    'Saturn': 'rgba(100,120,160,0.15)',
+    'Mercury': 'rgba(80,180,140,0.15)',
+    'Ketu':  'rgba(180,160,100,0.15)',
+  };
+  
+  // Group months by dasha path
+  const dashaGroups = [];
+  let currentDasha = null;
+  let currentGroup = null;
+  
+  months.forEach((m, i) => {
+    const maha = m.dasha_path.split('/')[0];
+    if (maha !== currentDasha) {
+      if (currentGroup) dashaGroups.push(currentGroup);
+      currentDasha = maha;
+      currentGroup = { lord: maha, start: i, end: i, color: dashaColors[maha] || 'rgba(255,255,255,0.05)' };
+    } else {
+      currentGroup.end = i;
+    }
+  });
+  if (currentGroup) dashaGroups.push(currentGroup);
+  
+  if (dashaRiverInstance) dashaRiverInstance.destroy();
+  
+  const colors = DOMAIN_COLORS[domain] || DOMAIN_COLORS.career;
+  
+  // Build annotation plugins for dasha bands
+  const annotations = {};
+  dashaGroups.forEach((group, i) => {
+    annotations[`dasha${i}`] = {
+      type: 'box',
+      xMin: group.start - 0.5,
+      xMax: group.end + 0.5,
+      yMin: 0,
+      yMax: 100,
+      backgroundColor: group.color,
+      borderWidth: 0,
+      label: {
+        display: true,
+        content: group.lord,
+        position: 'start',
+        color: 'rgba(240,235,224,0.4)',
+        font: { size: 10 }
+      }
+    };
+  });
+  
+  dashaRiverInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: domain,
+        data: scores,
+        borderColor: colors.line,
+        backgroundColor: colors.fill,
+        borderWidth: 2.5,
+        pointBackgroundColor: scores.map(s =>
+          s >= 70 ? '#3D9E8C' : s >= 50 ? '#C9A84C' : '#ff8c69'
+        ),
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        fill: true,
+        tension: 0.5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0D0D2B',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#F0EBE0',
+          bodyColor: 'rgba(240,235,224,0.7)',
+          callbacks: {
+            label: (ctx) => {
+              const score = ctx.parsed.y;
+              const band = score >= 70 ? 'Favorable ▲' : score >= 50 ? 'Mixed ~' : 'Challenging ▼';
+              return `${score}/100 — ${band}`;
+            },
+            afterLabel: (ctx) => {
+              const month = months[ctx.dataIndex];
+              return `${month.dasha_path} · ${month.transit_tone}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          min: 0, max: 100,
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: {
+            color: 'rgba(240,235,224,0.4)',
+            font: { size: 10 },
+            callback: v => v === 70 ? '▲ favorable' : v === 50 ? '~ mixed' : v === 30 ? '▼ low' : ''
+          }
+        },
+        x: {
+          grid: { color: 'rgba(255,255,255,0.03)' },
+          ticks: { color: 'rgba(240,235,224,0.5)', font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+function buildDashaLegend(months) {
+  const legendEl = document.getElementById('dasha-legend');
+  if (!legendEl) return;
+  
+  const dashaColorMap = {
+    'Venus': '#E87C6B', 'Sun': '#C9A84C', 'Moon': '#9B8EC4',
+    'Mars': '#DC5050', 'Rahu': '#3D9E8C', 'Jupiter': '#7B9E87',
+    'Saturn': '#6478A0', 'Mercury': '#50B48C', 'Ketu': '#B4A064'
+  };
+  
+  const seen = new Set();
+  const items = [];
+  months.forEach(m => {
+    const maha = m.dasha_path.split('/')[0];
+    if (!seen.has(maha)) {
+      seen.add(maha);
+      items.push({ lord: maha, color: dashaColorMap[maha] || '#888' });
+    }
+  });
+  
+  legendEl.innerHTML = items.map(item =>
+    `<div class="dasha-legend-item">
+      <div class="dasha-legend-dot" style="background:${item.color}"></div>
+      <span>${item.lord} period</span>
+    </div>`
+  ).join('');
+}
+
+function toggleRiverDomain(domain, btn) {
+  currentRiverDomain = domain;
+  document.querySelectorAll('#river-domain-toggle .dtoggle').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (monthlyData) renderRiverChart(monthlyData, domain);
+}
+
+// ── Compatibility Venn ──
+function renderCompatibilityVenn(subscores) {
+  if (!subscores) return;
+  
+  const card = document.getElementById('compatibility-venn-card');
+  if (card) card.classList.remove('hidden');
+  
+  const summaryEl = document.getElementById('venn-summary');
+  if (summaryEl) summaryEl.textContent = subscores.readiness_summary;
+  
+  const dimensions = [
+    { key: 'attraction',    color: '#E87C6B', label: 'Attraction' },
+    { key: 'communication', color: '#C9A84C', label: 'Communication' },
+    { key: 'longevity',     color: '#3D9E8C', label: 'Longevity' },
+    { key: 'karma',         color: '#9B8EC4', label: 'Karma' },
+  ];
+  
+  dimensions.forEach(({ key, color }) => {
+    const score = subscores[key] || 50;
+    const desc = subscores[`${key}_desc`] || '';
+    
+    // Score display
+    const scoreEl = document.getElementById(`venn-score-${key}`);
+    if (scoreEl) scoreEl.textContent = score;
+    
+    // Desc display
+    const descEl = document.getElementById(`venn-desc-${key}`);
+    if (descEl) descEl.textContent = desc;
+    
+    // Draw circular progress
+    drawVennCircle(`venn-canvas-${key}`, score, color);
+  });
+}
+
+function drawVennCircle(canvasId, score, color) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  const size = 120;
+  const cx = size / 2;
+  const cy = size / 2;
+  const radius = 48;
+  const lineWidth = 8;
+  
+  ctx.clearRect(0, 0, size, size);
+  
+  // Background ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+  
+  // Score arc
+  const startAngle = -Math.PI / 2;
+  const endAngle = startAngle + (score / 100) * Math.PI * 2;
+  
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, startAngle, endAngle);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  
+  // Glow effect
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, startAngle, endAngle);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth + 4;
+  ctx.globalAlpha = 0.15;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function triggerModeB() {
+  alert('Compatibility matching with a second chart is coming soon in Karmi. Join the waitlist at karmi.ai');
 }

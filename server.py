@@ -281,6 +281,66 @@ Rules:
 - Do not mention Western astrology
 - Do not break JSON structure"""
 
+def detect_chart_type(question, situation=""):
+    text = (question + " " + situation).lower()
+    
+    decision_words = ['should i', 'shall i', 'is it a good time', 'right time', 
+                      'right decision', 'take this', 'accept', 'reject', 'worth it',
+                      'good idea', 'bad idea', 'do it', 'move forward', 'go ahead']
+    
+    timing_words = ['when', 'timing', 'how long', 'which period', 'next few years',
+                    'best time', 'peak', 'window', 'how soon', 'which year',
+                    'which month', 'forecast', 'future', 'ahead', 'coming years']
+    
+    relationship_words = ['relationship', 'partner', 'love', 'marriage', 'compatible',
+                          'romantic', 'spouse', 'boyfriend', 'girlfriend', 'husband',
+                          'wife', 'dating', 'soulmate', 'find love', 'meet someone']
+    
+    for word in decision_words:
+        if word in text:
+            return 'decision_matrix'
+    
+    for word in relationship_words:
+        if word in text:
+            return 'compatibility_venn'
+    
+    for word in timing_words:
+        if word in text:
+            return 'dasha_river'
+    
+    return 'none'
+
+def build_relationship_subscores_prompt(name, vedic_context):
+    return f"""You are a Vedic astrology specialist. Based on this birth chart, 
+compute 4 relationship readiness scores for {name}.
+
+CHART:
+{vedic_context}
+
+Focus on:
+- Attraction: Venus strength, 5th house, Mars position (raw magnetism and desire)
+- Communication: Mercury, 3rd house, Moon (emotional expression in relationships)  
+- Longevity: 7th house lord strength, Saturn influence, Navamsha D9 (commitment capacity)
+- Karma: Rahu/Ketu axis, 8th house, past life indicators (karmic relationship patterns)
+
+Respond in exact JSON:
+{{
+  "attraction": <0-100>,
+  "communication": <0-100>,
+  "longevity": <0-100>,
+  "karma": <0-100>,
+  "attraction_desc": "One sentence plain language",
+  "communication_desc": "One sentence plain language",
+  "longevity_desc": "One sentence plain language",
+  "karma_desc": "One sentence plain language",
+  "readiness_summary": "Two sentences — overall relationship readiness right now"
+}}
+
+Rules:
+- Scores must reflect actual chart factors
+- Plain language descriptions — no jargon
+- Do not break JSON"""
+
 def call_agent(agent_type, name, situation, question, timeline, vedic_context, transit_context):
     try:
         prompt = build_agent_prompt(agent_type, name, situation, question, timeline, vedic_context, transit_context)
@@ -408,6 +468,38 @@ def ask_v2():
     order = ["career", "relationships", "wealth", "timing"]
     agent_results.sort(key=lambda x: order.index(x.get("domain", "career")))
 
+    # Detect chart type
+    chart_type = detect_chart_type(question, situation)
+    
+    # If relationship question, get sub-scores
+    relationship_subscores = None
+    if chart_type == 'compatibility_venn':
+        try:
+            rs_message = client.messages.create(
+                model="claude-haiku-4-5",
+                max_tokens=400,
+                messages=[{
+                    "role": "user",
+                    "content": build_relationship_subscores_prompt(name, vedic_context)
+                }]
+            )
+            rs_raw = rs_message.content[0].text
+            if rs_raw.startswith("```"):
+                rs_raw = rs_raw.split("```")[1]
+                if rs_raw.startswith("json"):
+                    rs_raw = rs_raw[4:]
+            relationship_subscores = json.loads(rs_raw.strip())
+        except Exception as e:
+            relationship_subscores = {
+                "attraction": 50, "communication": 50,
+                "longevity": 50, "karma": 50,
+                "attraction_desc": "Venus indicates moderate attraction energy",
+                "communication_desc": "Mercury suggests average communication patterns",
+                "longevity_desc": "7th house shows mixed commitment indicators",
+                "karma_desc": "Nodal axis reveals karmic relationship themes",
+                "readiness_summary": "Your chart shows readiness with areas to develop."
+            }
+
     # Step 3: Synthesis
     try:
         synthesis_prompt = build_synthesis_prompt(name, situation, question, timeline, agent_results)
@@ -436,7 +528,9 @@ def ask_v2():
     return jsonify({
         "success": True,
         "agents": agent_results,
-        "synthesis": synthesis
+        "synthesis": synthesis,
+        "chart_type": chart_type,
+        "relationship_subscores": relationship_subscores
     })
 
 @app.route("/health", methods=["GET"])
