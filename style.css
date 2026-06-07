@@ -96,7 +96,7 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding-top: 0;
+  padding-top: 44px;
   margin-top: 0;
 }
 .feature-section { padding: 32px 0; }
