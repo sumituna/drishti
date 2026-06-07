@@ -32,10 +32,25 @@ nav { position: relative; z-index: 10; display: flex; align-items: center; gap: 
 .nav-investor:hover { text-decoration: underline; }
 
 /* ── V2 Layout ── */
-.v2-layout { position: relative; z-index: 10; display: grid; grid-template-columns: 480px 1fr; gap: 60px; max-width: 1200px; margin: 0 auto; padding: 20px 40px 60px; }
+.v2-layout {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 480px 1fr;
+  gap: 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 40px 60px;
+  align-items: start;
+}
 
 /* ── Form Left ── */
-.v2-left { display: flex; flex-direction: column; gap: 24px; }
+.v2-left {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-top: 0;
+}
 .form-hero { padding: 0 0 8px; }
 .hero-label { font-size: 10px; letter-spacing: 0.25em; color: var(--teal); text-transform: uppercase; margin-bottom: 12px; }
 .hero-title { font-family: var(--serif); font-size: clamp(40px, 5vw, 64px); font-weight: 300; line-height: 1.05; color: var(--text); margin-bottom: 12px; }
@@ -76,7 +91,13 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
 .form-note { text-align: center; font-size: 11px; color: var(--text-dim); margin-top: 12px; font-style: italic; font-family: var(--serif); }
 
 /* ── V2 Right (Features) ── */
-.v2-right { display: flex; flex-direction: column; gap: 0; padding-top: 20px; }
+.v2-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-top: 0;
+  margin-top: 0;
+}
 .feature-section { padding: 32px 0; }
 .feature-label { font-size: 10px; letter-spacing: 0.2em; color: var(--teal); text-transform: uppercase; margin-bottom: 14px; }
 .feature-title { font-family: var(--serif); font-size: clamp(28px, 3vw, 42px); font-weight: 300; line-height: 1.15; color: var(--text); margin-bottom: 16px; }
