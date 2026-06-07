@@ -407,3 +407,155 @@ footer a { color: var(--gold); text-decoration: none; }
   margin-left: auto;
   flex-shrink: 0;
 }
+
+/* ── Agents Thinking Animation ── */
+.agents-thinking {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+.thinking-agent {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  opacity: 0.3;
+  transition: opacity 0.5s, transform 0.5s;
+  transform: translateX(-8px);
+}
+
+.thinking-agent.active {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.thinking-agent.done {
+  opacity: 0.6;
+  transform: translateX(0);
+}
+
+.thinking-orb {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.03);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.thinking-orb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(transparent 0deg, currentColor 360deg);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.thinking-agent.active .thinking-orb {
+  animation: orb-spin 1.5s linear infinite;
+  border-color: currentColor;
+}
+
+.thinking-agent.done .thinking-orb {
+  animation: none;
+  background: rgba(61,158,140,0.2);
+  border-color: var(--teal);
+}
+
+.thinking-agent.done .thinking-orb::after {
+  content: '✓';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  inset: 0;
+  background: none;
+  color: var(--teal);
+  font-size: 14px;
+  opacity: 1;
+}
+
+.orb-career      { color: #C9A84C; border-color: rgba(201,168,76,0.3); }
+.orb-relationships { color: #E87C6B; border-color: rgba(232,124,107,0.3); }
+.orb-wealth      { color: #3D9E8C; border-color: rgba(61,158,140,0.3); }
+.orb-timing      { color: #9B8EC4; border-color: rgba(155,142,196,0.3); }
+.orb-synthesis   { color: #C9A84C; border-color: rgba(201,168,76,0.3); }
+
+@keyframes orb-spin {
+  0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.1); }
+  50%  { box-shadow: 0 0 12px 2px currentColor; }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.1); }
+}
+
+.thinking-info { flex: 1; }
+
+.thinking-name {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.thinking-status {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+  font-family: var(--serif);
+}
+
+/* ── Chart Loading Animation ── */
+.chart-loading {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+}
+
+.chart-loading-orbs {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  height: 40px;
+}
+
+.cl-orb {
+  width: 8px;
+  border-radius: 4px;
+  background: var(--gold);
+  animation: bar-grow 1.2s ease-in-out infinite;
+}
+
+.cl-orb:nth-child(1)  { animation-delay: 0.0s; }
+.cl-orb:nth-child(2)  { animation-delay: 0.1s; }
+.cl-orb:nth-child(3)  { animation-delay: 0.2s; }
+.cl-orb:nth-child(4)  { animation-delay: 0.3s; }
+.cl-orb:nth-child(5)  { animation-delay: 0.4s; }
+.cl-orb:nth-child(6)  { animation-delay: 0.5s; }
+.cl-orb:nth-child(7)  { animation-delay: 0.6s; }
+.cl-orb:nth-child(8)  { animation-delay: 0.7s; }
+.cl-orb:nth-child(9)  { animation-delay: 0.8s; }
+.cl-orb:nth-child(10) { animation-delay: 0.9s; }
+.cl-orb:nth-child(11) { animation-delay: 1.0s; }
+.cl-orb:nth-child(12) { animation-delay: 1.1s; }
+
+@keyframes bar-grow {
+  0%, 100% { height: 6px;  opacity: 0.3; background: var(--text-dim); }
+  50%       { height: 36px; opacity: 1;   background: var(--gold); }
+}
+
+.chart-loading-text {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+  font-family: var(--serif);
+  letter-spacing: 0.05em;
+}

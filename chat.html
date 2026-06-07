@@ -37,8 +37,50 @@
     <!-- Loading -->
     <div class="chat-bubble assistant loading" id="loading-bubble">
       <div class="bubble-label">DRISHTI</div>
-      <div class="loading-dots"><span></span><span></span><span></span></div>
-      <div class="loading-status" id="loading-status">Reading your chart...</div>
+      <div class="agents-thinking" id="agents-thinking">
+        <div class="thinking-agent" id="think-chart">
+          <div class="thinking-orb"></div>
+          <div class="thinking-info">
+            <div class="thinking-name">Reading birth chart</div>
+            <div class="thinking-status">Computing planetary positions...</div>
+          </div>
+        </div>
+        <div class="thinking-agent" id="think-career">
+          <div class="thinking-orb orb-career"></div>
+          <div class="thinking-info">
+            <div class="thinking-name">♄ Career Agent</div>
+            <div class="thinking-status">Analysing 10th house...</div>
+          </div>
+        </div>
+        <div class="thinking-agent" id="think-relationships">
+          <div class="thinking-orb orb-relationships"></div>
+          <div class="thinking-info">
+            <div class="thinking-name">♀ Relationships Agent</div>
+            <div class="thinking-status">Reading 7th house...</div>
+          </div>
+        </div>
+        <div class="thinking-agent" id="think-wealth">
+          <div class="thinking-orb orb-wealth"></div>
+          <div class="thinking-info">
+            <div class="thinking-name">♃ Wealth Agent</div>
+            <div class="thinking-status">Checking 2nd & 11th house...</div>
+          </div>
+        </div>
+        <div class="thinking-agent" id="think-timing">
+          <div class="thinking-orb orb-timing"></div>
+          <div class="thinking-info">
+            <div class="thinking-name">☽ Timing Agent</div>
+            <div class="thinking-status">Mapping dasha periods...</div>
+          </div>
+        </div>
+        <div class="thinking-agent" id="think-synthesis">
+          <div class="thinking-orb orb-synthesis"></div>
+          <div class="thinking-info">
+            <div class="thinking-name">✦ Synthesis</div>
+            <div class="thinking-status">Waiting for agents...</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Synthesis verdict -->
@@ -73,24 +115,26 @@
       <div class="agents-2x2" id="agents-2x2"></div>
     </div>
 
-    <!-- Follow-up -->
-    <div class="reading-card hidden" id="followup-card">
-      <div class="section-label">ASK NEXT</div>
-      <div class="followup-chips" id="followup-chips"></div>
-    </div>
-
-    <!-- Limit CTA -->
-    <div class="limit-card hidden" id="limit-card">
-      <div class="limit-icon">✦</div>
-      <h3>Drishti has shown you the picture.</h3>
-      <p>Karmi goes deeper — 19 chapters, dasha timeline, life domain coaching, and an AI that travels with you as your chart unfolds.</p>
-      <a href="https://karmi.ai" class="karmi-btn">Explore Karmi →</a>
-      <button class="ask-again-btn" onclick="window.location.href='index.html'">Ask a new question</button>
-    </div>
-
     <!-- Year Ahead Charts -->
     <div class="charts-section hidden" id="charts-section">
-      
+      <div class="chart-loading" id="chart-loading">
+        <div class="chart-loading-orbs">
+          <div class="cl-orb"></div>
+          <div class="cl-orb"></div>
+          <div class="cl-orb"></div>
+          <div class="cl-orb"></div>
+          <div class="cl-orb"></div>
+          <div class="cl-orb"></div>
+          <div class="cl-orb"></div>
+          <div class="cl-orb"></div>
+          <div class="cl-orb"></div>
+          <div class="cl-orb"></div>
+          <div class="cl-orb"></div>
+          <div class="cl-orb"></div>
+        </div>
+        <div class="chart-loading-text">Computing your year ahead across 12 months...</div>
+      </div>
+
       <div class="chart-card" id="timeline-card">
         <div class="chart-header">
           <div class="section-label">YEAR AHEAD</div>
@@ -125,6 +169,21 @@
         </div>
       </div>
 
+    </div>
+
+    <!-- Follow-up -->
+    <div class="reading-card hidden" id="followup-card">
+      <div class="section-label">ASK NEXT</div>
+      <div class="followup-chips" id="followup-chips"></div>
+    </div>
+
+    <!-- Limit CTA -->
+    <div class="limit-card hidden" id="limit-card">
+      <div class="limit-icon">✦</div>
+      <h3>Drishti has shown you the picture.</h3>
+      <p>Karmi goes deeper — 19 chapters, dasha timeline, life domain coaching, and an AI that travels with you as your chart unfolds.</p>
+      <a href="https://karmi.ai" class="karmi-btn">Explore Karmi →</a>
+      <button class="ask-again-btn" onclick="window.location.href='index.html'">Ask a new question</button>
     </div>
 
   </main>

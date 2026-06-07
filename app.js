@@ -148,7 +148,6 @@ async function loadReading() {
 
 async function runV2Pipeline(data) {
   const steps = ['step-chart', 'step-agents', 'step-synthesis', 'step-reading'];
-  const statuses = ['Reading your chart...', 'Running specialist agents...', 'Synthesizing readings...', 'Preparing your oracle...'];
   let stepIndex = 0;
 
   const advanceStep = () => {
@@ -158,19 +157,41 @@ async function runV2Pipeline(data) {
     }
     if (stepIndex < steps.length) {
       document.getElementById(steps[stepIndex])?.classList.add('active');
-      const statusEl = document.getElementById('loading-status');
-      if (statusEl) statusEl.textContent = statuses[stepIndex];
       stepIndex++;
     }
   };
 
-  advanceStep();
+  // Animate thinking agents sequentially
+  const agentSequence = [
+    { id: 'think-chart',         status: 'Computing planetary positions...',  delay: 0    },
+    { id: 'think-career',        status: 'Analysing 10th house & Saturn...',  delay: 800  },
+    { id: 'think-relationships', status: 'Reading Venus & 7th house...',      delay: 1400 },
+    { id: 'think-wealth',        status: 'Checking Jupiter & 2nd house...',   delay: 2000 },
+    { id: 'think-timing',        status: 'Mapping dasha windows...',          delay: 2600 },
+    { id: 'think-synthesis',     status: 'Synthesising all readings...',      delay: 3400 },
+  ];
+
+  advanceStep(); // CHART
+
+  // Fire agent animations
+  agentSequence.forEach(({ id, status, delay }) => {
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add('active');
+        const statusEl = el.querySelector('.thinking-status');
+        if (statusEl) statusEl.textContent = status;
+      }
+    }, delay);
+  });
+
+  const agentTimers = [
+    setTimeout(() => advanceStep(), 2000),
+    setTimeout(() => advanceStep(), 5000),
+    setTimeout(() => advanceStep(), 7000),
+  ];
 
   try {
-    const t1 = setTimeout(() => advanceStep(), 2000);
-    const t2 = setTimeout(() => advanceStep(), 5000);
-    const t3 = setTimeout(() => advanceStep(), 7000);
-
     const response = await fetch(`${API}/ask-v2`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -188,10 +209,19 @@ async function runV2Pipeline(data) {
       })
     });
 
-    clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
+    agentTimers.forEach(t => clearTimeout(t));
     steps.forEach(s => {
       document.getElementById(s)?.classList.remove('active');
       document.getElementById(s)?.classList.add('done');
+    });
+
+    // Mark all agents done
+    agentSequence.forEach(({ id }) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('active');
+        el.classList.add('done');
+      }
     });
 
     const result = await response.json();
@@ -326,6 +356,7 @@ async function loadYearAhead(data) {
     renderTimelineChart(monthlyData, currentDomain);
     renderRadarChart(monthlyData);
 
+    document.getElementById('chart-loading')?.classList.add('hidden');
     document.getElementById('charts-section')?.classList.remove('hidden');
 
   } catch (err) {
