@@ -9,6 +9,26 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import json as json_module
+from pathlib import Path
+
+PROMPTS_FILE = Path(__file__).parent / 'prompts.json'
+
+def load_prompts():
+    try:
+        with open(PROMPTS_FILE, 'r', encoding='utf-8') as f:
+            return json_module.load(f)
+    except Exception:
+        return {}
+
+def save_prompts(prompts):
+    try:
+        with open(PROMPTS_FILE, 'w', encoding='utf-8') as f:
+            json_module.dump(prompts, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception:
+        return False
+
 app = Flask(__name__)
 CORS(app)
 
@@ -173,6 +193,10 @@ def format_transit_context(transit_result):
     return ""
 
 def build_agent_prompt(agent_type, name, situation, question, timeline, vedic_context, transit_context, preference='plain'):
+    prompts = load_prompts()
+    agent_key = f"{agent_type}_agent"
+    custom_prompt = prompts.get(agent_key, "")
+
     agent_configs = {
         "career": {
             "title": "Career & Purpose Agent",
@@ -245,6 +269,9 @@ Respond in this exact JSON:
 
 {language_rule}
 
+SPECIALIST INSTRUCTIONS:
+{custom_prompt if custom_prompt else f"Focus on {config['focus']} for this reading."}
+
 Rules:
 - Score must be justified by actual chart factors
 - Every signal must name a specific planet, house, nakshatra, or dasha
@@ -261,36 +288,17 @@ def build_synthesis_prompt(name, situation, question, timeline, agent_results, p
         agents_text += f"Timing: {agent['timing']}\n"
         agents_text += f"Advice: {agent['advice']}\n"
 
-    if preference == 'plain':
-        language_instruction = """LANGUAGE RULES (Plain & Personal mode):
-- Open with "{name}, let me tell you what I see here."
-- Write as a warm, direct astrologer speaking to a friend
-- NEVER use Vedic terms — translate everything:
-  * "sub-period" not "Antardasha"
-  * "main period" not "Mahadasha"  
-  * "minor cycle" not "Pratyantar"
-  * "your career house" not "H10"
-  * "at full strength" not "exalted"
-  * "weakened by the Sun" not "combust"
-  * "Saturn's 7-year test" not "Sade Sati"
-  * "challenging house" not "dusthana"
-  * "soul planet" not "Atmakaraka"
-  * "relationship planet" not "Darakaraka"
-  * "wealth combination" not "Dhana Yoga"
-  * "success combination" not "Raja Yoga"
-  * "lunar mansion" not "nakshatra"
-- Use months and plain time references not dasha codes
-- Make the person feel heard and understood
-- Sound like you genuinely care about their situation""".replace("{name}", name)
-    else:
-        language_instruction = """LANGUAGE RULES (Vedic & Technical mode):
-- Use full Vedic terminology throughout
-- Reference specific houses (H1-H12), dashas, nakshatras
-- Name specific yogas, dignities, combustion states
-- Include dasha path codes and exact period dates
-- Be precise and technically accurate"""
+    prompts = load_prompts()
+    synthesis_voice = prompts.get('synthesis_voice', 'Speak as a warm brilliant Vedic astrologer.')
+    plain_rules = prompts.get('plain_mode_rules', '')
+    vedic_rules = prompts.get('vedic_mode_rules', '')
 
-    return f"""You are Drishti — a warm, brilliant Vedic astrologer who speaks like a trusted advisor, not a textbook.
+    if preference == 'plain':
+        language_instruction = plain_rules
+    else:
+        language_instruction = vedic_rules
+
+    return f"""{synthesis_voice}
 
 You have received reports from 4 specialist agents who have each read {name}'s chart.
 Your job is to synthesize them into one unified consultation — the way a master astrologer 
@@ -585,6 +593,403 @@ def ask_v2():
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "Drishti is awake"})
+
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "karmi2026")
+
+@app.route("/admin", methods=["GET"])
+def admin_page():
+    return """<!DOCTYPE html>
+<html>
+<head>
+<title>Drishti Prompt Studio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #07071A; color: #F0EBE0; font-family: system-ui, sans-serif; font-size: 14px; }
+.header { padding: 24px 40px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; }
+.logo { font-size: 13px; letter-spacing: 0.2em; color: #F0EBE0; }
+.subtitle { font-size: 11px; color: rgba(240,235,224,0.5); margin-top: 4px; }
+.main { max-width: 900px; margin: 0 auto; padding: 40px; }
+.section { margin-bottom: 40px; }
+.section-title { font-size: 11px; letter-spacing: 0.2em; color: #3D9E8C; text-transform: uppercase; margin-bottom: 12px; }
+.section-desc { font-size: 12px; color: rgba(240,235,224,0.5); margin-bottom: 10px; line-height: 1.5; }
+textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; color: #F0EBE0; font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.6; resize: vertical; min-height: 140px; outline: none; transition: border-color 0.2s; }
+textarea:focus { border-color: #C9A84C; }
+.btn-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+.btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; }
+.btn-primary { background: #C9A84C; color: #07071A; }
+.btn-primary:hover { background: #D4B05A; }
+.btn-secondary { background: rgba(255,255,255,0.06); color: #F0EBE0; border: 1px solid rgba(255,255,255,0.1); }
+.btn-secondary:hover { background: rgba(255,255,255,0.1); }
+.btn-test { background: rgba(61,158,140,0.2); color: #3D9E8C; border: 1px solid rgba(61,158,140,0.3); }
+.btn-test:hover { background: rgba(61,158,140,0.3); }
+.status { padding: 10px 16px; border-radius: 8px; font-size: 12px; margin-top: 12px; display: none; }
+.status.success { background: rgba(61,158,140,0.15); border: 1px solid rgba(61,158,140,0.3); color: #3D9E8C; display: block; }
+.status.error { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.2); color: #ff6b6b; display: block; }
+.divider { height: 1px; background: rgba(255,255,255,0.06); margin: 40px 0; }
+.test-result { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; margin-top: 16px; font-size: 12px; line-height: 1.7; color: rgba(240,235,224,0.7); display: none; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+.version-item { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.version-date { font-size: 11px; color: rgba(240,235,224,0.4); }
+.version-btn { padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: none; color: rgba(240,235,224,0.6); font-size: 11px; cursor: pointer; }
+.version-btn:hover { border-color: #C9A84C; color: #C9A84C; }
+input[type=password] { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 14px; color: #F0EBE0; font-size: 14px; outline: none; margin-bottom: 12px; }
+input[type=password]:focus { border-color: #C9A84C; }
+.login-box { max-width: 400px; margin: 100px auto; padding: 40px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; }
+.login-title { font-size: 20px; margin-bottom: 8px; }
+.login-sub { font-size: 13px; color: rgba(240,235,224,0.5); margin-bottom: 24px; }
+</style>
+</head>
+<body>
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-title">Drishti Prompt Studio</div>
+    <div class="login-sub">Enter your admin password to continue.</div>
+    <input type="password" id="pwd-input" placeholder="Password" onkeydown="if(event.key==='Enter')login()" />
+    <button class="btn btn-primary" style="width:100%" onclick="login()">Enter →</button>
+    <div class="status" id="login-status"></div>
+  </div>
+</div>
+
+<div id="studio-screen" style="display:none">
+<div class="header">
+  <div>
+    <div class="logo">DRISHTI · PROMPT STUDIO</div>
+    <div class="subtitle">Configure how Claude reads your chart data</div>
+  </div>
+  <button class="btn btn-secondary" onclick="testReading()">Test with Sumit's chart →</button>
+</div>
+
+<div class="main">
+
+  <div class="section">
+    <div class="section-title">Career Agent</div>
+    <div class="section-desc">Instructions for how Claude reads career questions. Specify which houses, planets, and charts to prioritise and in what order.</div>
+    <textarea id="career_agent" rows="8"></textarea>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Relationships Agent</div>
+    <div class="section-desc">Instructions for relationship and love questions. Specify Venus, 7th house, D9 focus and weighting.</div>
+    <textarea id="relationships_agent" rows="8"></textarea>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Wealth Agent</div>
+    <div class="section-desc">Instructions for money and investment questions. Specify 2nd/11th house, Jupiter, Dhana yoga focus.</div>
+    <textarea id="wealth_agent" rows="8"></textarea>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Timing Agent</div>
+    <div class="section-desc">Instructions for timing questions. Specify dasha depth, transit focus, and window identification.</div>
+    <textarea id="timing_agent" rows="8"></textarea>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <div class="section-title">Synthesis Voice</div>
+    <div class="section-desc">How Drishti speaks when delivering the final unified reading. This sets the tone and style of the consultation voice.</div>
+    <textarea id="synthesis_voice" rows="5"></textarea>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Plain Mode Rules</div>
+    <div class="section-desc">Translation rules for Plain & Personal mode. Define which Vedic terms get replaced with plain English equivalents.</div>
+    <textarea id="plain_mode_rules" rows="8"></textarea>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Vedic Mode Rules</div>
+    <div class="section-desc">Instructions for Vedic & Technical mode. Define the level of technical depth and terminology expected.</div>
+    <textarea id="vedic_mode_rules" rows="5"></textarea>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="savePrompts()">Save & Apply →</button>
+    <button class="btn btn-secondary" onclick="resetToDefaults()">Reset to Defaults</button>
+    <button class="btn btn-test" onclick="testReading()">Test Reading</button>
+  </div>
+  <div class="status" id="save-status"></div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <div class="section-title">Test Result</div>
+    <div class="section-desc">Fire a test reading with Sumit's chart using current prompts.</div>
+    <div class="test-result" id="test-result"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <div class="section-title">Version History</div>
+    <div class="section-desc">Last 5 saved versions. Click Restore to roll back.</div>
+    <div id="version-list"></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+let token = sessionStorage.getItem('admin_token');
+if (token) showStudio();
+
+function login() {
+  const pwd = document.getElementById('pwd-input').value;
+  fetch('/admin/auth', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({password: pwd})
+  }).then(r => r.json()).then(d => {
+    if (d.success) {
+      token = d.token;
+      sessionStorage.setItem('admin_token', token);
+      showStudio();
+    } else {
+      const s = document.getElementById('login-status');
+      s.textContent = 'Incorrect password.';
+      s.className = 'status error';
+    }
+  });
+}
+
+function showStudio() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('studio-screen').style.display = 'block';
+  loadPrompts();
+}
+
+function loadPrompts() {
+  fetch('/admin/prompts', {
+    headers: {'Authorization': 'Bearer ' + token}
+  }).then(r => r.json()).then(data => {
+    const fields = ['career_agent','relationships_agent','wealth_agent',
+                    'timing_agent','synthesis_voice','plain_mode_rules','vedic_mode_rules'];
+    fields.forEach(f => {
+      const el = document.getElementById(f);
+      if (el) el.value = data[f] || '';
+    });
+    renderVersionHistory(data.version_history || []);
+  });
+}
+
+function savePrompts() {
+  const fields = ['career_agent','relationships_agent','wealth_agent',
+                  'timing_agent','synthesis_voice','plain_mode_rules','vedic_mode_rules'];
+  const prompts = {};
+  fields.forEach(f => {
+    prompts[f] = document.getElementById(f)?.value || '';
+  });
+  fetch('/admin/prompts', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','Authorization':'Bearer ' + token},
+    body: JSON.stringify(prompts)
+  }).then(r => r.json()).then(d => {
+    const s = document.getElementById('save-status');
+    if (d.success) {
+      s.textContent = '✓ Prompts saved and applied. Next reading will use these instructions.';
+      s.className = 'status success';
+      loadPrompts();
+    } else {
+      s.textContent = '✗ Save failed: ' + (d.error || 'unknown error');
+      s.className = 'status error';
+    }
+    setTimeout(() => s.style.display = 'none', 4000);
+  });
+}
+
+function resetToDefaults() {
+  if (!confirm('Reset all prompts to defaults? This cannot be undone.')) return;
+  fetch('/admin/reset', {
+    method: 'POST',
+    headers: {'Authorization':'Bearer ' + token}
+  }).then(r => r.json()).then(d => {
+    if (d.success) { loadPrompts(); }
+  });
+}
+
+function testReading() {
+  const resultEl = document.getElementById('test-result');
+  resultEl.style.display = 'block';
+  resultEl.textContent = 'Running test reading with Sumit chart (Oct 6 1978, 20:40, New Delhi)...';
+  fetch('/admin/test', {
+    method: 'POST',
+    headers: {'Authorization':'Bearer ' + token}
+  }).then(r => r.json()).then(d => {
+    if (d.success) {
+      const s = d.synthesis;
+      resultEl.textContent = 
+        'OVERALL: ' + s.overall_score + '%\n\n' +
+        'SYNTHESIS:\n' + s.synthesis + '\n\n' +
+        'CONVERGENCE: ' + s.convergence + '\n\n' +
+        'TENSION: ' + s.tension + '\n\n' +
+        'TOP ACTION: ' + s.top_action + '\n\n' +
+        'ORACLE: ' + s.oracle_note;
+    } else {
+      resultEl.textContent = 'Error: ' + (d.error || 'test failed');
+    }
+  });
+}
+
+function renderVersionHistory(versions) {
+  const el = document.getElementById('version-list');
+  if (!versions.length) {
+    el.innerHTML = '<div style="font-size:12px;color:rgba(240,235,224,0.3)">No versions saved yet.</div>';
+    return;
+  }
+  el.innerHTML = versions.slice().reverse().map((v, i) =>
+    '<div class="version-item">' +
+    '<div><div style="font-size:12px;color:rgba(240,235,224,0.7)">' + v.label + '</div>' +
+    '<div class="version-date">' + v.saved_at + '</div></div>' +
+    '<button class="version-btn" onclick="restoreVersion(' + (versions.length - 1 - i) + ')">Restore</button>' +
+    '</div>'
+  ).join('');
+}
+
+function restoreVersion(index) {
+  if (!confirm('Restore this version?')) return;
+  fetch('/admin/restore/' + index, {
+    method: 'POST',
+    headers: {'Authorization':'Bearer ' + token}
+  }).then(r => r.json()).then(d => {
+    if (d.success) loadPrompts();
+  });
+}
+</script>
+</body>
+</html>"""
+
+@app.route("/admin/auth", methods=["POST"])
+def admin_auth():
+    data = request.json
+    if data.get("password") == ADMIN_PASSWORD:
+        import secrets
+        token = secrets.token_hex(16)
+        return jsonify({"success": True, "token": token})
+    return jsonify({"success": False})
+
+def verify_admin(req):
+    auth = req.headers.get("Authorization", "")
+    return auth.startswith("Bearer ") and len(auth) > 10
+
+@app.route("/admin/prompts", methods=["GET"])
+def get_prompts():
+    if not verify_admin(request):
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify(load_prompts())
+
+@app.route("/admin/prompts", methods=["POST"])
+def update_prompts():
+    if not verify_admin(request):
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        new_prompts = request.json
+        current = load_prompts()
+
+        # Save version history
+        from datetime import datetime
+        history = current.get("version_history", [])
+        history.append({
+            "label": f"Version {len(history) + 1}",
+            "saved_at": datetime.now().strftime("%d %b %Y %H:%M"),
+            "prompts": {k: current[k] for k in current if k != "version_history"}
+        })
+        # Keep last 5 only
+        history = history[-5:]
+
+        new_prompts["version_history"] = history
+        save_prompts(new_prompts)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route("/admin/reset", methods=["POST"])
+def reset_prompts():
+    if not verify_admin(request):
+        return jsonify({"error": "unauthorized"}), 401
+    default_path = Path(__file__).parent / 'prompts.json'
+    prompts = load_prompts()
+    prompts["version_history"] = prompts.get("version_history", [])
+    save_prompts(prompts)
+    return jsonify({"success": True})
+
+@app.route("/admin/test", methods=["POST"])
+def test_reading():
+    if not verify_admin(request):
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        birth_data = {
+            "date": "1978-10-06",
+            "time": "20:40",
+            "lat": 28.6139,
+            "lon": 77.209,
+            "utc_offset": 5.5
+        }
+        vedic_result = get_vedic_context(birth_data)
+        if "error" in vedic_result:
+            return jsonify({"error": vedic_result["error"]}), 500
+
+        vedic_context = vedic_result.get("karmi_prompt_context") or str(vedic_result)
+        transit_result = get_today_transits()
+        transit_context = format_transit_context(transit_result)
+
+        agent_types = ["career", "relationships", "wealth", "timing"]
+        agent_results = []
+        preference = "plain"
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {
+                executor.submit(
+                    call_agent, agent_type, "Sumit",
+                    "Testing the prompt studio",
+                    "How is my overall chart looking right now?",
+                    "Next 3 months",
+                    vedic_context, transit_context, preference
+                ): agent_type
+                for agent_type in agent_types
+            }
+            for future in as_completed(futures):
+                agent_results.append(future.result())
+
+        order = ["career", "relationships", "wealth", "timing"]
+        agent_results.sort(key=lambda x: order.index(x.get("domain", "career")))
+
+        synthesis_prompt = build_synthesis_prompt(
+            "Sumit", "Testing prompt studio",
+            "How is my overall chart looking right now?",
+            "Next 3 months", agent_results, preference
+        )
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": synthesis_prompt}]
+        )
+        raw = message.content[0].text
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        synthesis = json.loads(raw.strip())
+        return jsonify({"success": True, "synthesis": synthesis, "agents": agent_results})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/restore/<int:index>", methods=["POST"])
+def restore_version(index):
+    if not verify_admin(request):
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        prompts = load_prompts()
+        history = prompts.get("version_history", [])
+        if index < len(history):
+            restored = history[index]["prompts"]
+            restored["version_history"] = history
+            save_prompts(restored)
+            return jsonify({"success": True})
+        return jsonify({"success": False, "error": "Version not found"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     import os
