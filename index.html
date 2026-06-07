@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Drishti — Ask the Stars</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="landing">
+
+  <!-- Star field -->
+  <div class="stars" id="stars"></div>
+  <div class="stars-2" id="stars2"></div>
+
+  <!-- Nav -->
+  <nav>
+    <div class="logo">DRISHTI</div>
+    <div class="nav-tagline">ancient wisdom, modern clarity</div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <p class="hero-label">VEDIC ORACLE</p>
+    <h1 class="hero-title">Ask <em>Drishti</em></h1>
+    <p class="hero-sub">One question. One reading. Grounded in your birth chart —<br>dashas, planets, and timing.</p>
+  </section>
+
+  <!-- Form -->
+  <section class="form-section">
+    <div class="form-card">
+
+      <div class="form-group">
+        <label>Your Name</label>
+        <input type="text" id="name" placeholder="Seeker" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Birth Date</label>
+          <input type="date" id="dob" />
+        </div>
+        <div class="form-group">
+          <label>Birth Time</label>
+          <input type="time" id="tob" />
+        </div>
+      </div>
+
+      <div class="form-group" style="position:relative;">
+        <label>Birth Place</label>
+        <input
+          type="text"
+          id="place"
+          placeholder="Mumbai, India"
+          autocomplete="off"
+          oninput="onPlaceInput(this.value)"
+        />
+        <div id="place-status" class="place-status"></div>
+        <div id="city-dropdown" class="city-dropdown hidden"></div>
+      </div>
+
+      <!-- Divider -->
+      <div class="form-divider">
+        <span>your question</span>
+      </div>
+
+      <!-- Sample prompt chips -->
+      <div class="prompt-chips">
+        <button class="chip" onclick="setQuestion('Will I find love this year?')">Will I find love this year?</button>
+        <button class="chip" onclick="setQuestion('Is this the right career move?')">Is this the right career move?</button>
+        <button class="chip" onclick="setQuestion('What about my finances?')">What about my finances?</button>
+        <button class="chip" onclick="setQuestion('Am I in a growth phase or consolidation phase?')">Growth or consolidation?</button>
+        <button class="chip" onclick="setQuestion('What is my strongest period for money in the next year?')">Money timing</button>
+        <button class="chip" onclick="setQuestion('What pattern keeps repeating in my life and why?')">Life patterns</button>
+      </div>
+
+      <!-- Question -->
+      <div class="form-group">
+        <label>Your Question</label>
+        <textarea id="question" rows="3" placeholder="What does my chart reveal about..."></textarea>
+      </div>
+
+      <!-- Submit -->
+      <button class="ask-btn" id="ask-btn" onclick="submitQuestion()">
+        Reveal my reading
+      </button>
+
+      <p class="form-note">One free reading per chart. Drishti reads your Vedic chart — not Western astrology.</p>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>Powered by <a href="https://karmi.ai">Karmi</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    function makeStars(id, count) {
+      const el = document.getElementById(id);
+      let html = '';
+      for (let i = 0; i < count; i++) {
+        const x = Math.random() * 100;
+        const y = Math.random() * 100;
+        const size = Math.random() * 2 + 0.5;
+        const opacity = Math.random() * 0.7 + 0.3;
+        const delay = Math.random() * 4;
+        html += `<div class="star" style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;opacity:${opacity};animation-delay:${delay}s"></div>`;
+      }
+      el.innerHTML = html;
+    }
+    makeStars('stars', 150);
+    makeStars('stars2', 80);
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('.form-group')) {
+          document.getElementById('city-dropdown')?.classList.add('hidden');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

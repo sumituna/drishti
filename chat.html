@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Drishti — Your Reading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="chat-page">
+
+  <div class="stars" id="stars"></div>
+
+  <!-- Header -->
+  <header class="chat-header">
+    <a href="index.html" class="logo">DRISHTI</a>
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-step" id="step-chart">CHART</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step" id="step-planets">PLANETS</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step" id="step-dashas">DASHAS</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step" id="step-reading">READING</div>
+    </div>
+  </header>
+
+  <!-- Chat area -->
+  <main class="chat-main">
+
+    <!-- User question bubble -->
+    <div class="chat-bubble user" id="user-bubble">
+      <div class="bubble-label">YOU</div>
+      <div class="bubble-text" id="user-question-text"></div>
+    </div>
+
+    <!-- Loading state -->
+    <div class="chat-bubble assistant loading" id="loading-bubble">
+      <div class="bubble-label">DRISHTI</div>
+      <div class="loading-dots">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="loading-status" id="loading-status">Reading your chart...</div>
+    </div>
+
+    <!-- Reading card -->
+    <div class="reading-card hidden" id="reading-card">
+
+      <div class="bubble-label">DRISHTI</div>
+
+      <!-- Verdict -->
+      <div class="reading-section verdict-section">
+        <div class="section-label">VERDICT</div>
+        <p class="verdict-text" id="verdict"></p>
+      </div>
+
+      <!-- Signals -->
+      <div class="reading-section">
+        <div class="section-label">KEY SIGNALS</div>
+        <ul class="signals-list" id="signals"></ul>
+      </div>
+
+      <!-- Timing -->
+      <div class="reading-section">
+        <div class="section-label">TIMING</div>
+        <p class="timing-text" id="timing"></p>
+      </div>
+
+      <!-- Oracle note -->
+      <div class="reading-section oracle-section">
+        <p class="oracle-text" id="oracle-note"></p>
+      </div>
+
+      <!-- Follow-up questions -->
+      <div class="reading-section">
+        <div class="section-label">ASK NEXT</div>
+        <div class="followup-chips" id="followup-chips"></div>
+      </div>
+
+    </div>
+
+    <!-- 1 question limit CTA -->
+    <div class="limit-card hidden" id="limit-card">
+      <div class="limit-icon">✦</div>
+      <h3>Drishti has shown you a glimpse.</h3>
+      <p>Your chart holds 19 chapters. Karmi reads all of them — dashas, transits, life domains — and travels with you as your chart unfolds.</p>
+      <a href="https://karmi.ai" class="karmi-btn">Explore Karmi →</a>
+      <button class="ask-again-btn" onclick="window.location.href='index.html'">Ask a new question</button>
+    </div>
+
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    const el = document.getElementById("stars");
+    let html = "";
+    for (let i = 0; i < 120; i++) {
+      const x = Math.random() * 100;
+      const y = Math.random() * 100;
+      const size = Math.random() * 2 + 0.5;
+      const opacity = Math.random() * 0.6 + 0.2;
+      const delay = Math.random() * 4;
+      html += `<div class="star" style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;--op:${opacity};animation-delay:${delay}s"></div>`;
+    }
+    el.innerHTML = html;
+
+    window.addEventListener("DOMContentLoaded", loadReading);
+  </script>
+</body>
+</html>
