@@ -3,97 +3,171 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Drishti — Ask the Stars</title>
+  <title>Drishti — Vedic Oracle</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="landing">
-
-  <!-- Star field -->
   <div class="stars" id="stars"></div>
   <div class="stars-2" id="stars2"></div>
 
-  <!-- Nav -->
   <nav>
     <div class="logo">DRISHTI</div>
-    <div class="nav-tagline">ancient wisdom, modern clarity</div>
+    <div class="nav-tagline">vedic oracle</div>
+    <a href="investor.html" class="nav-investor">For Investors →</a>
   </nav>
 
-  <!-- Hero -->
-  <section class="hero">
-    <p class="hero-label">VEDIC ORACLE</p>
-    <h1 class="hero-title">Ask <em>Drishti</em></h1>
-    <p class="hero-sub">One question. One reading. Grounded in your birth chart —<br>dashas, planets, and timing.</p>
-  </section>
+  <div class="v2-layout">
 
-  <!-- Form -->
-  <section class="form-section">
-    <div class="form-card">
-
-      <div class="form-group">
-        <label>Your Name</label>
-        <input type="text" id="name" placeholder="Seeker" />
+    <!-- LEFT: Form -->
+    <div class="v2-left">
+      <div class="form-hero">
+        <p class="hero-label">VEDIC ORACLE</p>
+        <h1 class="hero-title">Ask <em>Drishti</em></h1>
+        <p class="hero-sub">Four specialist agents read your chart.<br>One synthesis tells you what to do.</p>
       </div>
 
-      <div class="form-row">
+      <div class="form-card">
         <div class="form-group">
-          <label>Birth Date</label>
-          <input type="date" id="dob" />
+          <label>Your Name</label>
+          <input type="text" id="name" placeholder="Seeker" />
         </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Birth Date</label>
+            <input type="date" id="dob" />
+          </div>
+          <div class="form-group">
+            <label>Birth Time</label>
+            <input type="time" id="tob" />
+          </div>
+        </div>
+
+        <div class="form-group" style="position:relative;">
+          <label>Birth Place</label>
+          <input type="text" id="place" placeholder="Mumbai, India"
+            autocomplete="off" oninput="onPlaceInput(this.value)" onblur="hideCityDropdown()" />
+          <div id="place-status" class="place-status"></div>
+          <div id="city-dropdown" class="city-dropdown hidden"></div>
+        </div>
+
+        <div class="form-divider"><span>your context</span></div>
+
         <div class="form-group">
-          <label>Birth Time</label>
-          <input type="time" id="tob" />
+          <label>My Situation</label>
+          <input type="text" id="situation"
+            placeholder="e.g. I am currently between jobs, considering a move abroad" />
+        </div>
+
+        <div class="form-group">
+          <label>My Question</label>
+          <input type="text" id="question"
+            placeholder="e.g. Should I take this London job offer?" />
+        </div>
+
+        <div class="form-group">
+          <label>My Timeline</label>
+          <input type="text" id="timeline"
+            placeholder="e.g. Decision needed in the next 3 months" />
+        </div>
+
+        <div class="prompt-chips">
+          <button class="chip" onclick="fillContext('I am employed but feeling stuck and unfulfilled','Should I change careers or industries?','Next 6 months')">Career change</button>
+          <button class="chip" onclick="fillContext('I am single and ready for a serious relationship','When will I meet my life partner?','Next 1 year')">Love & marriage</button>
+          <button class="chip" onclick="fillContext('I have savings to invest and want to grow wealth','Is this a good time to invest or start a business?','Next 3 months')">Money & investment</button>
+          <button class="chip" onclick="fillContext('I am at a crossroads and need clarity on my path','What is my strongest period coming up?','Next 6 months')">Timing & energy</button>
+        </div>
+
+        <button class="ask-btn" onclick="submitV2()">
+          Consult the Oracle →
+        </button>
+
+        <p class="form-note">4 specialist agents · Real Vedic chart · One unified reading</p>
+      </div>
+    </div>
+
+    <!-- RIGHT: Features -->
+    <div class="v2-right">
+      <div class="feature-section">
+        <div class="feature-label">HOW DRISHTI WORKS</div>
+        <h2 class="feature-title">Four agents.<br>One chart.<br><em>Complete clarity.</em></h2>
+        <p class="feature-sub">Most astrology apps give you one generic answer. Drishti runs four specialist agents in parallel — each reading your chart through a different lens — then synthesizes them into one unified verdict.</p>
+      </div>
+
+      <div class="agent-cards">
+        <div class="agent-preview-card">
+          <div class="agent-icon">♄</div>
+          <div>
+            <div class="agent-name">Career & Purpose</div>
+            <div class="agent-desc">10th house · Saturn · D10 chart · Artha houses</div>
+          </div>
+        </div>
+        <div class="agent-preview-card">
+          <div class="agent-icon">♀</div>
+          <div>
+            <div class="agent-name">Relationships & Love</div>
+            <div class="agent-desc">7th house · Venus · Navamsha · Upapada Lagna</div>
+          </div>
+        </div>
+        <div class="agent-preview-card">
+          <div class="agent-icon">♃</div>
+          <div>
+            <div class="agent-name">Wealth & Resources</div>
+            <div class="agent-desc">2nd · 11th house · Jupiter · Dhana yogas</div>
+          </div>
+        </div>
+        <div class="agent-preview-card">
+          <div class="agent-icon">☽</div>
+          <div>
+            <div class="agent-name">Timing & Energy</div>
+            <div class="agent-desc">Dasha · Transits · Moon nakshatra · Windows</div>
+          </div>
         </div>
       </div>
 
-      <div class="form-group" style="position:relative;">
-        <label>Birth Place</label>
-        <input
-          type="text"
-          id="place"
-          placeholder="Mumbai, India"
-          autocomplete="off"
-          oninput="onPlaceInput(this.value)"
-        />
-        <div id="place-status" class="place-status"></div>
-        <div id="city-dropdown" class="city-dropdown hidden"></div>
+      <div class="feature-divider"></div>
+
+      <div class="feature-section">
+        <div class="feature-label">BETTER CONTEXT = BETTER READING</div>
+        <h2 class="feature-title">Don't ask<br><em>"how is my career."</em></h2>
+        <p class="feature-sub">Ask: "I'm 34, considering a move to London for a senior role. My current job is stable but limiting. What does my chart say about this specific decision in the next 3 months?"</p>
+        <p class="feature-sub" style="margin-top:12px;">Context transforms a generic prediction into a precise, actionable reading grounded in your actual planetary periods.</p>
       </div>
 
-      <!-- Divider -->
-      <div class="form-divider">
-        <span>your question</span>
+      <div class="feature-divider"></div>
+
+      <div class="feature-section">
+        <div class="feature-label">POWERED BY</div>
+        <div class="tech-stack">
+          <div class="tech-item">
+            <div class="tech-name">Swiss Ephemeris</div>
+            <div class="tech-desc">Precise planetary positions via vedic.py</div>
+          </div>
+          <div class="tech-item">
+            <div class="tech-name">EventScorer</div>
+            <div class="tech-desc">Real dasha timing and domain scoring</div>
+          </div>
+          <div class="tech-item">
+            <div class="tech-name">Claude AI</div>
+            <div class="tech-desc">Interpretation by Anthropic's frontier model</div>
+          </div>
+        </div>
       </div>
 
-      <!-- Sample prompt chips -->
-      <div class="prompt-chips">
-        <button class="chip" onclick="setQuestion('Will I find love this year?')">Will I find love this year?</button>
-        <button class="chip" onclick="setQuestion('Is this the right career move?')">Is this the right career move?</button>
-        <button class="chip" onclick="setQuestion('What about my finances?')">What about my finances?</button>
-        <button class="chip" onclick="setQuestion('Am I in a growth phase or consolidation phase?')">Growth or consolidation?</button>
-        <button class="chip" onclick="setQuestion('What is my strongest period for money in the next year?')">Money timing</button>
-        <button class="chip" onclick="setQuestion('What pattern keeps repeating in my life and why?')">Life patterns</button>
+      <div class="karmi-cta-box">
+        <div class="karmi-cta-label">BUILT BY</div>
+        <div class="karmi-cta-title">Karmi.ai</div>
+        <p class="karmi-cta-sub">The full Karmi experience — 19-chapter birth chart report, dasha timeline, life domain coaching — is coming soon.</p>
+        <a href="https://karmi.ai" class="karmi-cta-btn">Join the waitlist →</a>
       </div>
-
-      <!-- Question -->
-      <div class="form-group">
-        <label>Your Question</label>
-        <textarea id="question" rows="3" placeholder="What does my chart reveal about..."></textarea>
-      </div>
-
-      <!-- Submit -->
-      <button class="ask-btn" id="ask-btn" onclick="submitQuestion()">
-        Reveal my reading
-      </button>
-
-      <p class="form-note">One free reading per chart. Drishti reads your Vedic chart — not Western astrology.</p>
 
     </div>
-  </section>
+  </div>
 
-  <!-- Footer -->
   <footer>
-    <p>Powered by <a href="https://karmi.ai">Karmi</a></p>
+    <p>Drishti is a preview by <a href="https://karmi.ai">Karmi.ai</a> · <a href="investor.html">Investor info →</a></p>
   </footer>
 
   <script src="app.js"></script>
@@ -114,12 +188,8 @@
     makeStars('stars', 150);
     makeStars('stars2', 80);
 
-    document.addEventListener('DOMContentLoaded', function() {
-      document.addEventListener('click', function(e) {
-        if (!e.target.closest('.form-group')) {
-          document.getElementById('city-dropdown')?.classList.add('hidden');
-        }
-      });
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.form-group')) hideCityDropdown();
     });
   </script>
 </body>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Drishti — Investor Overview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="investor-page">
+  <div class="stars" id="stars"></div>
+
+  <nav>
+    <a href="index.html" class="logo">DRISHTI</a>
+    <div class="nav-tagline">by Karmi.ai</div>
+  </nav>
+
+  <div class="investor-layout">
+
+    <!-- LEFT: Live demo -->
+    <div class="investor-left">
+      <div class="demo-label">TRY THE LIVE DEMO</div>
+      <p class="demo-sub">Enter any birth details and ask a question. This is the real product — powered by Swiss Ephemeris and Claude AI.</p>
+
+      <div class="form-card">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="name" placeholder="Seeker" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Birth Date</label>
+            <input type="date" id="dob" />
+          </div>
+          <div class="form-group">
+            <label>Birth Time</label>
+            <input type="time" id="tob" />
+          </div>
+        </div>
+        <div class="form-group" style="position:relative;">
+          <label>Birth Place</label>
+          <input type="text" id="place" placeholder="New Delhi, India"
+            autocomplete="off" oninput="onPlaceInput(this.value)" onblur="hideCityDropdown()" />
+          <div id="place-status" class="place-status"></div>
+          <div id="city-dropdown" class="city-dropdown hidden"></div>
+        </div>
+        <div class="form-divider"><span>context</span></div>
+        <div class="form-group">
+          <label>Situation</label>
+          <input type="text" id="situation" placeholder="e.g. Evaluating a major career move" />
+        </div>
+        <div class="form-group">
+          <label>Question</label>
+          <input type="text" id="question" placeholder="e.g. Is this the right time?" />
+        </div>
+        <div class="form-group">
+          <label>Timeline</label>
+          <input type="text" id="timeline" placeholder="e.g. Next 3 months" />
+        </div>
+        <button class="ask-btn" onclick="submitV2()">Consult the Oracle →</button>
+        <p class="form-note">Real Vedic chart · 4 specialist agents · Live reading</p>
+      </div>
+    </div>
+
+    <!-- RIGHT: Pitch -->
+    <div class="investor-right">
+
+      <div class="pitch-section">
+        <div class="pitch-tag">THE PROBLEM</div>
+        <h2 class="pitch-title">Astrology has <em>400 million users.</em><br>Zero intelligent products.</h2>
+        <p class="pitch-body">Generic sun-sign apps give the same reading to everyone born in October. They don't know your dashas, your planetary periods, or what the current sky means for your specific chart. Users get entertainment, not insight.</p>
+      </div>
+
+      <div class="pitch-section">
+        <div class="pitch-tag">THE SOLUTION</div>
+        <h2 class="pitch-title">Drishti reads <em>your chart.</em><br>Not your sun sign.</h2>
+        <p class="pitch-body">Every reading is computed from Swiss Ephemeris — precise planetary positions, divisional charts, Vimshottari dasha periods, and live transits. Four specialist AI agents analyze each life domain independently, then synthesize into one unified verdict.</p>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-number">400M+</div>
+          <div class="stat-label">Vedic astrology users globally</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">$12B</div>
+          <div class="stat-label">Global astrology market</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">0</div>
+          <div class="stat-label">Intelligent Vedic AI products</div>
+        </div>
+      </div>
+
+      <div class="pitch-section">
+        <div class="pitch-tag">THE TECHNOLOGY</div>
+        <div class="tech-pitch-stack">
+          <div class="tech-pitch-item">
+            <div class="tech-pitch-icon">⚙</div>
+            <div>
+              <div class="tech-pitch-name">vedic.py + Swiss Ephemeris</div>
+              <div class="tech-pitch-desc">1,139-line custom engine. 20 divisional charts. Shadbala. Ashtakavarga. Zero third-party API dependency.</div>
+            </div>
+          </div>
+          <div class="tech-pitch-item">
+            <div class="tech-pitch-icon">◎</div>
+            <div>
+              <div class="tech-pitch-name">EventScorer</div>
+              <div class="tech-pitch-desc">Proprietary dasha scoring engine. Converts planetary periods into domain-specific opportunity scores.</div>
+            </div>
+          </div>
+          <div class="tech-pitch-item">
+            <div class="tech-pitch-icon">✦</div>
+            <div>
+              <div class="tech-pitch-name">Multi-Agent Architecture</div>
+              <div class="tech-pitch-desc">4 specialist Claude agents run in parallel. Career, relationships, wealth, timing — each with domain-specific chart focus.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pitch-section">
+        <div class="pitch-tag">THE PRODUCT</div>
+        <h2 class="pitch-title"><em>Karmi.ai</em> — the full experience.</h2>
+        <p class="pitch-body">Drishti is the preview. Karmi is the product — a 19-chapter birth chart report, dasha life timeline, AI coaching across all life domains, and compounding intelligence that grows with the user over time.</p>
+        <div class="pitch-founders">
+          <div class="founder-item">
+            <div class="founder-name">Ankush Wadhwa</div>
+            <div class="founder-role">25+ years Vedic astrology practice · Co-founder</div>
+          </div>
+          <div class="founder-item">
+            <div class="founder-name">Sumit Khurana</div>
+            <div class="founder-role">Product & Business · Co-founder</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="investor-cta">
+        <h3>Interested in Karmi.ai?</h3>
+        <p>We are currently raising our seed round. If you are building in AI, consumer, or the future of personal intelligence — we would love to talk.</p>
+        <a href="mailto:sumit@karmi.ai" class="karmi-btn">Get in touch →</a>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    function makeStars(id, count) {
+      const el = document.getElementById(id);
+      let html = '';
+      for (let i = 0; i < count; i++) {
+        const x = Math.random() * 100; const y = Math.random() * 100;
+        const size = Math.random() * 2 + 0.5; const opacity = Math.random() * 0.7 + 0.3;
+        const delay = Math.random() * 4;
+        html += `<div class="star" style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;opacity:${opacity};animation-delay:${delay}s"></div>`;
+      }
+      el.innerHTML = html;
+    }
+    makeStars('stars', 120);
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.form-group')) hideCityDropdown();
+    });
+  </script>
+</body>
+</html>
