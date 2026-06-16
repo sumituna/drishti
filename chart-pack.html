@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chart Pack — Karmi.ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="landing chart-pack-page">
+  <div class="stars" id="stars"></div>
+  <div class="stars-2" id="stars2"></div>
+
+  <nav class="pack-nav">
+    <a href="https://karmi.ai" class="pack-logo">KARMI.AI</a>
+    <a href="index.html" class="pack-nav-link">Ask Drishti →</a>
+  </nav>
+
+  <section class="landing-hero pack-hero">
+    <p class="hero-label">VEDIC CHART PACK</p>
+    <h1 class="hero-title pack-hero-title">Your Permanent<br><em>Vedic Astrologer.</em></h1>
+    <p class="hero-sub">One file. Upload to ChatGPT, Claude, or Gemini.<br>Ask anything about your life — career, relationships,<br>timing, wealth — anytime, forever.</p>
+    <div class="pack-trust-pills">
+      <span class="method-tag">Swiss Ephemeris · 20 Divisional Charts</span>
+      <span class="method-tag">Works With Any AI</span>
+      <span class="method-tag">One-Time. Yours Forever</span>
+    </div>
+  </section>
+
+  <main class="pack-main">
+
+    <div id="pack-pre-result">
+
+      <section class="pack-steps">
+        <div class="pack-step">
+          <span class="pack-step-num">①</span>
+          <span class="pack-step-text">Enter birth details · 60 seconds</span>
+        </div>
+        <div class="pack-step">
+          <span class="pack-step-num">②</span>
+          <span class="pack-step-text">See your chart glimpse · Free, instant</span>
+        </div>
+        <div class="pack-step">
+          <span class="pack-step-num">③</span>
+          <span class="pack-step-text">Download free or unlock full · ₹199 once</span>
+        </div>
+      </section>
+
+      <section class="pack-form-section">
+        <h2 class="pack-form-heading">Generate Your Chart Pack</h2>
+        <div class="form-card pack-form-card">
+          <div class="form-group">
+            <label>Your Name</label>
+            <input type="text" id="name" placeholder="Seeker" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Birth Date</label>
+              <input type="date" id="dob" />
+            </div>
+            <div class="form-group">
+              <label>Birth Time</label>
+              <input type="time" id="tob" />
+            </div>
+          </div>
+
+          <div class="form-group" style="position:relative;">
+            <label>Birth Place</label>
+            <input type="text" id="place" placeholder="Mumbai, India"
+              autocomplete="off" oninput="onPlaceInput(this.value)" onblur="hideCityDropdown()" />
+            <div id="place-status" class="place-status"></div>
+            <div id="city-dropdown" class="city-dropdown hidden"></div>
+          </div>
+
+          <button class="ask-btn" id="generate-btn" onclick="generateChartPack()">
+            Generate My Chart Pack →
+          </button>
+
+          <p class="form-note">Free to generate. No account needed.</p>
+        </div>
+      </section>
+
+      <section class="pack-comparison">
+        <div class="pack-compare-grid">
+          <div class="form-card pack-compare-col">
+            <div class="pack-compare-label">FREE PACK</div>
+            <ul class="pack-compare-list">
+              <li>Chart identity — Rising, Moon, Sun</li>
+              <li>Current Mahadasha + theme line</li>
+              <li>6 domain score bars (life right now)</li>
+              <li>Top 3 active yogas</li>
+              <li>Shareable identity card</li>
+              <li>Basic .md download for any AI</li>
+            </ul>
+            <button type="button" class="pack-btn-outline" disabled>Included free</button>
+          </div>
+          <div class="form-card pack-compare-col pack-compare-full">
+            <div class="pack-compare-label">FULL PACK</div>
+            <ul class="pack-compare-list">
+              <li>Everything in Free Pack</li>
+              <li>All yogas with strength modifiers</li>
+              <li>Complete Vimshottari dasha timeline</li>
+              <li>20 divisional charts (D1–D60)</li>
+              <li>12-month transit windows</li>
+              <li>D9 relationship + D10 career analysis</li>
+              <li>AI master prompt file — ready to upload</li>
+            </ul>
+            <button type="button" class="pack-btn-outline" disabled>₹199 · one-time</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <div id="pack-results" class="hidden">
+
+      <div class="form-card pack-result-card pack-identity-card">
+        <p class="pack-identity-name" id="result-name"></p>
+        <p class="pack-identity-birth" id="result-birth"></p>
+        <div class="pack-triplet">
+          <div class="pack-triplet-item">
+            <span class="pack-triplet-label">RISING</span>
+            <span class="pack-triplet-value" id="result-rising"></span>
+          </div>
+          <div class="pack-triplet-item">
+            <span class="pack-triplet-label">MOON</span>
+            <span class="pack-triplet-value" id="result-moon"></span>
+          </div>
+          <div class="pack-triplet-item">
+            <span class="pack-triplet-label">SUN</span>
+            <span class="pack-triplet-value" id="result-sun"></span>
+          </div>
+        </div>
+        <p class="pack-theme-line" id="result-theme"></p>
+      </div>
+
+      <div class="form-card pack-result-card">
+        <div class="pack-result-heading">YOUR LIFE RIGHT NOW</div>
+        <p class="pack-md-sub" id="result-md-line"></p>
+        <div class="pack-domain-bars" id="domain-bars"></div>
+      </div>
+
+      <div class="form-card pack-result-card">
+        <div class="pack-result-heading">YOUR 3 ACTIVE YOGAS</div>
+        <div id="yoga-list"></div>
+        <p class="pack-yoga-more" id="yoga-more"></p>
+      </div>
+
+      <div class="form-card pack-result-card pack-locked-card">
+        <div class="pack-result-heading pack-locked-heading">░ LOCKED IN FREE VERSION</div>
+        <ul class="pack-locked-list">
+          <li>Full Vimshottari dasha timeline (120 years)</li>
+          <li>All yogas with strength modifiers</li>
+          <li>20 divisional charts (D1–D60)</li>
+          <li>D9 Navamsha relationship analysis</li>
+          <li>D10 Dashamsha career chart</li>
+          <li>Ashtakavarga bindu tables</li>
+          <li>12-month transit windows</li>
+          <li>Shadbala planetary strength report</li>
+          <li>AI master prompt file</li>
+        </ul>
+      </div>
+
+      <div class="form-card pack-result-card pack-share-card">
+        <div class="pack-share-title">✦ Share Your Chart Identity</div>
+        <p class="pack-share-line" id="share-line"></p>
+        <p class="pack-share-theme" id="share-theme"></p>
+        <div class="pack-share-btns">
+          <button type="button" class="pack-btn-outline" onclick="copyShareText()">Copy Text</button>
+          <a id="whatsapp-link" class="pack-btn-outline" href="#" target="_blank" rel="noopener">Share on WhatsApp</a>
+        </div>
+      </div>
+
+      <div class="pack-dual-cta">
+        <button type="button" class="pack-btn-outline" onclick="downloadFreePack()">Download Free Pack</button>
+        <button type="button" class="ask-btn pack-unlock-btn" onclick="window.open('https://karmi.ai/pack','_blank')">Unlock Full Pack → ₹199</button>
+        <p class="form-note">Secure payment via Stripe · Instant download · No subscription</p>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer>
+    <p>Chart Pack by <a href="https://karmi.ai">Karmi.ai</a> · <a href="index.html">Ask Drishti →</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+  <script src="chart-pack.js"></script>
+  <script>
+    function makeStars(id, count) {
+      const el = document.getElementById(id);
+      let html = '';
+      for (let i = 0; i < count; i++) {
+        const x = Math.random() * 100;
+        const y = Math.random() * 100;
+        const size = Math.random() * 2 + 0.5;
+        const opacity = Math.random() * 0.7 + 0.3;
+        const delay = Math.random() * 4;
+        html += `<div class="star" style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;opacity:${opacity};animation-delay:${delay}s"></div>`;
+      }
+      el.innerHTML = html;
+    }
+    makeStars('stars', 150);
+    makeStars('stars2', 80);
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.form-group')) hideCityDropdown();
+    });
+  </script>
+</body>
+</html>

@@ -1,9 +1,10 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import anthropic
 import requests
 import os
 import json
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 
@@ -29,13 +30,51 @@ def save_prompts(prompts):
     except Exception:
         return False
 
+from chart_pack import build_free_pack, build_free_md
+
 app = Flask(__name__)
 CORS(app)
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 NGROK_URL = os.getenv("NGROK_URL")
+VEDIC_ENGINE_URL = os.environ.get(
+    "VEDIC_ENGINE_URL",
+    "https://mocha-editor-monogamy.ngrok-free.app",
+).rstrip("/")
+# Chart computation path on the engine (override to /chart-free when available)
+VEDIC_ENGINE_CHART_PATH = os.environ.get("VEDIC_ENGINE_CHART_PATH", "/api/vedic-native")
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+
+def _birth_to_engine_payload(birth_data):
+    date_str = birth_data.get("date", "")
+    time_str = birth_data.get("time", "00:00")
+    year, month, day = [int(x) for x in date_str.split("-")]
+    hour, minute = [int(x) for x in time_str.split(":")]
+    return {
+        "year": year, "month": month, "day": day,
+        "hour": hour, "minute": minute,
+        "lat": float(birth_data.get("lat", 28.6139)),
+        "lon": float(birth_data.get("lon", 77.209)),
+        "utc_offset": float(birth_data.get("utc_offset", 5.5)),
+    }
+
+def fetch_chart_from_engine(birth_data):
+    """POST birth data to the remote Vedic computation engine via HTTP."""
+    try:
+        if not VEDIC_ENGINE_URL:
+            return {"error": "VEDIC_ENGINE_URL not configured"}
+        payload = _birth_to_engine_payload(birth_data)
+        url = f"{VEDIC_ENGINE_URL}{VEDIC_ENGINE_CHART_PATH}"
+        headers = {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+        }
+        response = requests.post(url, json=payload, headers=headers, timeout=45)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        return {"error": str(e)}
 
 def get_vedic_context(birth_data):
     try:
@@ -590,345 +629,293 @@ def ask_v2():
         "relationship_subscores": relationship_subscores
     })
 
+def _pack_birth_payload(data):
+    return {
+        "date": data.get("date"),
+        "time": data.get("time", "00:00"),
+        "lat": data.get("lat"),
+        "lon": data.get("lon"),
+        "utc_offset": data.get("timezone") or data.get("utc_offset", 5.5),
+    }
+
+@app.route("/generate-free-pack", methods=["POST"])
+def generate_free_pack():
+    try:
+        data = request.json or {}
+        name = (data.get("name") or "Seeker").strip()
+        date = data.get("date")
+        time = data.get("time", "00:00")
+        place = (data.get("place") or "").strip()
+
+        if not date or not time or not place:
+            return jsonify({"error": "Missing birth date, time, or place"}), 400
+        if not data.get("lat") or not data.get("lon"):
+            return jsonify({"error": "Birth place must be selected from geocode dropdown"}), 400
+
+        chart = fetch_chart_from_engine(_pack_birth_payload(data))
+        if "error" in chart:
+            return jsonify({"error": chart["error"]}), 500
+
+        pack = build_free_pack(chart, name, date, time, place)
+        return jsonify(pack)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/download-free-pack", methods=["GET"])
+def download_free_pack():
+    try:
+        data = request.args
+        name = (data.get("name") or "Seeker").strip()
+        date = data.get("date")
+        time = data.get("time", "00:00")
+        place = (data.get("place") or "").strip()
+
+        if not date or not time or not place:
+            return jsonify({"error": "Missing birth parameters"}), 400
+        if not data.get("lat") or not data.get("lon"):
+            return jsonify({"error": "Missing lat/lon"}), 400
+
+        chart = fetch_chart_from_engine({
+            "date": date,
+            "time": time,
+            "lat": data.get("lat"),
+            "lon": data.get("lon"),
+            "utc_offset": data.get("timezone") or data.get("utc_offset", 5.5),
+        })
+        if "error" in chart:
+            return jsonify({"error": chart["error"]}), 500
+
+        pack = build_free_pack(chart, name, date, time, place)
+        md_content = build_free_md(pack)
+
+        safe_name = re.sub(r"[^\w\-]", "_", name)[:40] or "chart"
+        filename = f"{safe_name}_karmi_free.md"
+
+        return Response(
+            md_content,
+            mimetype="text/markdown",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "Drishti is awake"})
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "karmi2026")
 
-@app.route("/admin", methods=["GET"])
+def check_admin(req):
+    # Check password from header, query param, or JSON body
+    auth = req.headers.get("X-Admin-Password", "")
+    if auth == ADMIN_PASSWORD:
+        return True
+    pwd = req.args.get("pwd", "")
+    if pwd == ADMIN_PASSWORD:
+        return True
+    try:
+        body = req.get_json(silent=True) or {}
+        if body.get("password") == ADMIN_PASSWORD:
+            return True
+    except:
+        pass
+    return False
+
+@app.route("/admin", methods=["GET", "POST"])
 def admin_page():
-    return """<!DOCTYPE html>
+    # Simple password form
+    if request.method == "POST":
+        pwd = request.form.get("password", "")
+        if pwd != ADMIN_PASSWORD:
+            return admin_login("Incorrect password")
+        # Password correct - show studio with prompts
+        prompts = load_prompts()
+        return admin_studio(prompts)
+    return admin_login()
+
+def admin_login(error=""):
+    return f"""<!DOCTYPE html>
 <html>
 <head>
 <title>Drishti Prompt Studio</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #07071A; color: #F0EBE0; font-family: system-ui, sans-serif; font-size: 14px; }
-.header { padding: 24px 40px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; }
-.logo { font-size: 13px; letter-spacing: 0.2em; color: #F0EBE0; }
-.subtitle { font-size: 11px; color: rgba(240,235,224,0.5); margin-top: 4px; }
-.main { max-width: 900px; margin: 0 auto; padding: 40px; }
-.section { margin-bottom: 40px; }
-.section-title { font-size: 11px; letter-spacing: 0.2em; color: #3D9E8C; text-transform: uppercase; margin-bottom: 12px; }
-.section-desc { font-size: 12px; color: rgba(240,235,224,0.5); margin-bottom: 10px; line-height: 1.5; }
-textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; color: #F0EBE0; font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.6; resize: vertical; min-height: 140px; outline: none; transition: border-color 0.2s; }
-textarea:focus { border-color: #C9A84C; }
-.btn-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
-.btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; }
-.btn-primary { background: #C9A84C; color: #07071A; }
-.btn-primary:hover { background: #D4B05A; }
-.btn-secondary { background: rgba(255,255,255,0.06); color: #F0EBE0; border: 1px solid rgba(255,255,255,0.1); }
-.btn-secondary:hover { background: rgba(255,255,255,0.1); }
-.btn-test { background: rgba(61,158,140,0.2); color: #3D9E8C; border: 1px solid rgba(61,158,140,0.3); }
-.btn-test:hover { background: rgba(61,158,140,0.3); }
-.status { padding: 10px 16px; border-radius: 8px; font-size: 12px; margin-top: 12px; display: none; }
-.status.success { background: rgba(61,158,140,0.15); border: 1px solid rgba(61,158,140,0.3); color: #3D9E8C; display: block; }
-.status.error { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.2); color: #ff6b6b; display: block; }
-.divider { height: 1px; background: rgba(255,255,255,0.06); margin: 40px 0; }
-.test-result { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; margin-top: 16px; font-size: 12px; line-height: 1.7; color: rgba(240,235,224,0.7); display: none; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
-.version-item { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-.version-date { font-size: 11px; color: rgba(240,235,224,0.4); }
-.version-btn { padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: none; color: rgba(240,235,224,0.6); font-size: 11px; cursor: pointer; }
-.version-btn:hover { border-color: #C9A84C; color: #C9A84C; }
-input[type=password] { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 14px; color: #F0EBE0; font-size: 14px; outline: none; margin-bottom: 12px; }
-input[type=password]:focus { border-color: #C9A84C; }
-.login-box { max-width: 400px; margin: 100px auto; padding: 40px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; }
-.login-title { font-size: 20px; margin-bottom: 8px; }
-.login-sub { font-size: 13px; color: rgba(240,235,224,0.5); margin-bottom: 24px; }
+* {{ box-sizing: border-box; margin: 0; padding: 0; }}
+body {{ background: #07071A; color: #F0EBE0; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }}
+.box {{ background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 40px; width: 100%; max-width: 400px; }}
+h2 {{ font-size: 20px; font-weight: 400; margin-bottom: 8px; }}
+p {{ font-size: 13px; color: rgba(240,235,224,0.5); margin-bottom: 24px; }}
+input {{ width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 14px; color: #F0EBE0; font-size: 14px; outline: none; margin-bottom: 12px; }}
+button {{ width: 100%; background: #C9A84C; color: #07071A; border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 500; cursor: pointer; }}
+.error {{ color: #ff6b6b; font-size: 12px; margin-top: 10px; }}
 </style>
 </head>
 <body>
-<div id="login-screen">
-  <div class="login-box">
-    <div class="login-title">Drishti Prompt Studio</div>
-    <div class="login-sub">Enter your admin password to continue.</div>
-    <input type="password" id="pwd-input" placeholder="Password" onkeydown="if(event.key==='Enter')login()" />
-    <button class="btn btn-primary" style="width:100%" onclick="login()">Enter →</button>
-    <div class="status" id="login-status"></div>
-  </div>
+<div class="box">
+  <h2>Drishti Prompt Studio</h2>
+  <p>Enter your admin password to configure Claude's reading instructions.</p>
+  <form method="POST">
+    <input type="password" name="password" placeholder="Password" autofocus />
+    <button type="submit">Enter →</button>
+    {"<div class='error'>" + error + "</div>" if error else ""}
+  </form>
 </div>
+</body>
+</html>"""
 
-<div id="studio-screen" style="display:none">
+def admin_studio(prompts):
+    fields = [
+        ("career_agent", "Career Agent", "How Claude reads career questions — houses, planets, weightings."),
+        ("relationships_agent", "Relationships Agent", "How Claude reads love and relationship questions."),
+        ("wealth_agent", "Wealth Agent", "How Claude reads money and investment questions."),
+        ("timing_agent", "Timing Agent", "How Claude reads timing and period questions."),
+        ("synthesis_voice", "Synthesis Voice", "How Drishti speaks when delivering the final reading."),
+        ("plain_mode_rules", "Plain Mode Rules", "Translation rules — Vedic terms to plain English."),
+        ("vedic_mode_rules", "Vedic Mode Rules", "Instructions for full technical Vedic terminology mode."),
+    ]
+    
+    fields_html = ""
+    for key, title, desc in fields:
+        value = prompts.get(key, "").replace('"', '&quot;').replace('<', '&lt;')
+        fields_html += f"""
+        <div class="section">
+          <div class="section-title">{title}</div>
+          <div class="section-desc">{desc}</div>
+          <textarea name="{key}" rows="7">{value}</textarea>
+        </div>"""
+    
+    # Version history
+    history = prompts.get("version_history", [])
+    history_html = ""
+    if history:
+        for i, v in enumerate(reversed(history)):
+            history_html += f"""
+            <div class="version-item">
+              <div>
+                <div class="v-label">{v.get('label','Version')}</div>
+                <div class="v-date">{v.get('saved_at','')}</div>
+              </div>
+              <button type="submit" form="restore-form" name="restore_index" value="{len(history)-1-i}">Restore</button>
+            </div>"""
+    else:
+        history_html = "<div class='no-versions'>No versions saved yet.</div>"
+    
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+<title>Drishti Prompt Studio</title>
+<style>
+* {{ box-sizing: border-box; margin: 0; padding: 0; }}
+body {{ background: #07071A; color: #F0EBE0; font-family: system-ui, sans-serif; font-size: 14px; }}
+.header {{ padding: 20px 40px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; }}
+.logo {{ font-size: 13px; letter-spacing: 0.2em; }}
+.sub {{ font-size: 11px; color: rgba(240,235,224,0.4); margin-top: 3px; }}
+.main {{ max-width: 860px; margin: 0 auto; padding: 40px; }}
+.section {{ margin-bottom: 32px; }}
+.section-title {{ font-size: 11px; letter-spacing: 0.18em; color: #3D9E8C; text-transform: uppercase; margin-bottom: 8px; }}
+.section-desc {{ font-size: 12px; color: rgba(240,235,224,0.45); margin-bottom: 10px; line-height: 1.5; }}
+textarea {{ width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 14px; color: #F0EBE0; font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.6; resize: vertical; outline: none; }}
+textarea:focus {{ border-color: #C9A84C; }}
+.btn-row {{ display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }}
+.btn {{ padding: 10px 22px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; }}
+.btn-save {{ background: #C9A84C; color: #07071A; }}
+.btn-test {{ background: rgba(61,158,140,0.2); color: #3D9E8C; border: 1px solid rgba(61,158,140,0.3); }}
+.divider {{ height: 1px; background: rgba(255,255,255,0.06); margin: 36px 0; }}
+.version-item {{ background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }}
+.v-label {{ font-size: 12px; color: rgba(240,235,224,0.7); }}
+.v-date {{ font-size: 11px; color: rgba(240,235,224,0.35); margin-top: 2px; }}
+.version-item button {{ padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: none; color: rgba(240,235,224,0.5); font-size: 11px; cursor: pointer; }}
+.no-versions {{ font-size: 12px; color: rgba(240,235,224,0.3); }}
+.saved-msg {{ background: rgba(61,158,140,0.15); border: 1px solid rgba(61,158,140,0.3); color: #3D9E8C; border-radius: 8px; padding: 10px 14px; font-size: 12px; margin-bottom: 20px; display: none; }}
+</style>
+</head>
+<body>
 <div class="header">
   <div>
     <div class="logo">DRISHTI · PROMPT STUDIO</div>
-    <div class="subtitle">Configure how Claude reads your chart data</div>
+    <div class="sub">Configure how Claude reads your chart data</div>
   </div>
-  <button class="btn btn-secondary" onclick="testReading()">Test with Sumit's chart →</button>
+  <a href="/admin/test-reading" target="_blank" style="background:rgba(61,158,140,0.2);color:#3D9E8C;border:1px solid rgba(61,158,140,0.3);padding:8px 16px;border-radius:8px;font-size:12px;text-decoration:none;">Test with Sumit's chart →</a>
 </div>
 
 <div class="main">
 
-  <div class="section">
-    <div class="section-title">Career Agent</div>
-    <div class="section-desc">Instructions for how Claude reads career questions. Specify which houses, planets, and charts to prioritise and in what order.</div>
-    <textarea id="career_agent" rows="8"></textarea>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Relationships Agent</div>
-    <div class="section-desc">Instructions for relationship and love questions. Specify Venus, 7th house, D9 focus and weighting.</div>
-    <textarea id="relationships_agent" rows="8"></textarea>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Wealth Agent</div>
-    <div class="section-desc">Instructions for money and investment questions. Specify 2nd/11th house, Jupiter, Dhana yoga focus.</div>
-    <textarea id="wealth_agent" rows="8"></textarea>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Timing Agent</div>
-    <div class="section-desc">Instructions for timing questions. Specify dasha depth, transit focus, and window identification.</div>
-    <textarea id="timing_agent" rows="8"></textarea>
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="section">
-    <div class="section-title">Synthesis Voice</div>
-    <div class="section-desc">How Drishti speaks when delivering the final unified reading. This sets the tone and style of the consultation voice.</div>
-    <textarea id="synthesis_voice" rows="5"></textarea>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Plain Mode Rules</div>
-    <div class="section-desc">Translation rules for Plain & Personal mode. Define which Vedic terms get replaced with plain English equivalents.</div>
-    <textarea id="plain_mode_rules" rows="8"></textarea>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Vedic Mode Rules</div>
-    <div class="section-desc">Instructions for Vedic & Technical mode. Define the level of technical depth and terminology expected.</div>
-    <textarea id="vedic_mode_rules" rows="5"></textarea>
-  </div>
-
+<form method="POST" action="/admin/save">
+  <input type="hidden" name="password" value="{ADMIN_PASSWORD}">
+  {fields_html}
   <div class="btn-row">
-    <button class="btn btn-primary" onclick="savePrompts()">Save & Apply →</button>
-    <button class="btn btn-secondary" onclick="resetToDefaults()">Reset to Defaults</button>
-    <button class="btn btn-test" onclick="testReading()">Test Reading</button>
+    <button type="submit" class="btn btn-save">Save & Apply →</button>
   </div>
-  <div class="status" id="save-status"></div>
+</form>
 
-  <div class="divider"></div>
+<div class="divider"></div>
 
-  <div class="section">
-    <div class="section-title">Test Result</div>
-    <div class="section-desc">Fire a test reading with Sumit's chart using current prompts.</div>
-    <div class="test-result" id="test-result"></div>
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="section">
-    <div class="section-title">Version History</div>
-    <div class="section-desc">Last 5 saved versions. Click Restore to roll back.</div>
-    <div id="version-list"></div>
-  </div>
-
-</div>
+<div class="section">
+  <div class="section-title">Version History</div>
+  <div class="section-desc">Last 5 saved versions. Restore any previous configuration.</div>
+  {history_html}
+  <form method="POST" action="/admin/restore" id="restore-form">
+    <input type="hidden" name="password" value="{ADMIN_PASSWORD}">
+  </form>
 </div>
 
-<script>
-let token = sessionStorage.getItem('admin_token');
-if (token) showStudio();
-
-function login() {
-  const pwd = document.getElementById('pwd-input').value;
-  fetch('/admin/auth', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({password: pwd})
-  }).then(r => r.json()).then(d => {
-    if (d.success) {
-      token = d.token;
-      sessionStorage.setItem('admin_token', token);
-      showStudio();
-    } else {
-      const s = document.getElementById('login-status');
-      s.textContent = 'Incorrect password.';
-      s.className = 'status error';
-    }
-  });
-}
-
-function showStudio() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('studio-screen').style.display = 'block';
-  loadPrompts();
-}
-
-function loadPrompts() {
-  fetch('/admin/prompts', {
-    headers: {'Authorization': 'Bearer ' + token}
-  }).then(r => r.json()).then(data => {
-    const fields = ['career_agent','relationships_agent','wealth_agent',
-                    'timing_agent','synthesis_voice','plain_mode_rules','vedic_mode_rules'];
-    fields.forEach(f => {
-      const el = document.getElementById(f);
-      if (el) el.value = data[f] || '';
-    });
-    renderVersionHistory(data.version_history || []);
-  });
-}
-
-function savePrompts() {
-  const fields = ['career_agent','relationships_agent','wealth_agent',
-                  'timing_agent','synthesis_voice','plain_mode_rules','vedic_mode_rules'];
-  const prompts = {};
-  fields.forEach(f => {
-    prompts[f] = document.getElementById(f)?.value || '';
-  });
-  fetch('/admin/prompts', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json','Authorization':'Bearer ' + token},
-    body: JSON.stringify(prompts)
-  }).then(r => r.json()).then(d => {
-    const s = document.getElementById('save-status');
-    if (d.success) {
-      s.textContent = '✓ Prompts saved and applied. Next reading will use these instructions.';
-      s.className = 'status success';
-      loadPrompts();
-    } else {
-      s.textContent = '✗ Save failed: ' + (d.error || 'unknown error');
-      s.className = 'status error';
-    }
-    setTimeout(() => s.style.display = 'none', 4000);
-  });
-}
-
-function resetToDefaults() {
-  if (!confirm('Reset all prompts to defaults? This cannot be undone.')) return;
-  fetch('/admin/reset', {
-    method: 'POST',
-    headers: {'Authorization':'Bearer ' + token}
-  }).then(r => r.json()).then(d => {
-    if (d.success) { loadPrompts(); }
-  });
-}
-
-function testReading() {
-  const resultEl = document.getElementById('test-result');
-  resultEl.style.display = 'block';
-  resultEl.textContent = 'Running test reading with Sumit chart (Oct 6 1978, 20:40, New Delhi)...';
-  fetch('/admin/test', {
-    method: 'POST',
-    headers: {'Authorization':'Bearer ' + token}
-  }).then(r => r.json()).then(d => {
-    if (d.success) {
-      const s = d.synthesis;
-      resultEl.textContent = 
-        'OVERALL: ' + s.overall_score + '%\n\n' +
-        'SYNTHESIS:\n' + s.synthesis + '\n\n' +
-        'CONVERGENCE: ' + s.convergence + '\n\n' +
-        'TENSION: ' + s.tension + '\n\n' +
-        'TOP ACTION: ' + s.top_action + '\n\n' +
-        'ORACLE: ' + s.oracle_note;
-    } else {
-      resultEl.textContent = 'Error: ' + (d.error || 'test failed');
-    }
-  });
-}
-
-function renderVersionHistory(versions) {
-  const el = document.getElementById('version-list');
-  if (!versions.length) {
-    el.innerHTML = '<div style="font-size:12px;color:rgba(240,235,224,0.3)">No versions saved yet.</div>';
-    return;
-  }
-  el.innerHTML = versions.slice().reverse().map((v, i) =>
-    '<div class="version-item">' +
-    '<div><div style="font-size:12px;color:rgba(240,235,224,0.7)">' + v.label + '</div>' +
-    '<div class="version-date">' + v.saved_at + '</div></div>' +
-    '<button class="version-btn" onclick="restoreVersion(' + (versions.length - 1 - i) + ')">Restore</button>' +
-    '</div>'
-  ).join('');
-}
-
-function restoreVersion(index) {
-  if (!confirm('Restore this version?')) return;
-  fetch('/admin/restore/' + index, {
-    method: 'POST',
-    headers: {'Authorization':'Bearer ' + token}
-  }).then(r => r.json()).then(d => {
-    if (d.success) loadPrompts();
-  });
-}
-</script>
+</div>
 </body>
 </html>"""
 
-@app.route("/admin/auth", methods=["POST"])
-def admin_auth():
-    data = request.json
-    if data.get("password") == ADMIN_PASSWORD:
-        import secrets
-        token = secrets.token_hex(16)
-        return jsonify({"success": True, "token": token})
-    return jsonify({"success": False})
-
-def verify_admin(req):
-    auth = req.headers.get("Authorization", "")
-    return auth.startswith("Bearer ") and len(auth) > 10
-
-@app.route("/admin/prompts", methods=["GET"])
-def get_prompts():
-    if not verify_admin(request):
-        return jsonify({"error": "unauthorized"}), 401
-    return jsonify(load_prompts())
-
-@app.route("/admin/prompts", methods=["POST"])
-def update_prompts():
-    if not verify_admin(request):
-        return jsonify({"error": "unauthorized"}), 401
+@app.route("/admin/save", methods=["POST"])
+def admin_save():
+    if request.form.get("password") != ADMIN_PASSWORD:
+        return admin_login("Unauthorized")
     try:
-        new_prompts = request.json
+        fields = ["career_agent","relationships_agent","wealth_agent",
+                  "timing_agent","synthesis_voice","plain_mode_rules","vedic_mode_rules"]
         current = load_prompts()
-
-        # Save version history
+        
         from datetime import datetime
         history = current.get("version_history", [])
         history.append({
             "label": f"Version {len(history) + 1}",
             "saved_at": datetime.now().strftime("%d %b %Y %H:%M"),
-            "prompts": {k: current[k] for k in current if k != "version_history"}
+            "prompts": {k: current.get(k,"") for k in fields}
         })
-        # Keep last 5 only
         history = history[-5:]
-
-        new_prompts["version_history"] = history
+        
+        new_prompts = {"version_history": history}
+        for f in fields:
+            new_prompts[f] = request.form.get(f, "")
+        
         save_prompts(new_prompts)
-        return jsonify({"success": True})
+        prompts = load_prompts()
+        return admin_studio(prompts)
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+        return admin_login(f"Save failed: {str(e)}")
 
-@app.route("/admin/reset", methods=["POST"])
-def reset_prompts():
-    if not verify_admin(request):
-        return jsonify({"error": "unauthorized"}), 401
-    default_path = Path(__file__).parent / 'prompts.json'
-    prompts = load_prompts()
-    prompts["version_history"] = prompts.get("version_history", [])
-    save_prompts(prompts)
-    return jsonify({"success": True})
+@app.route("/admin/restore", methods=["POST"])
+def admin_restore():
+    if request.form.get("password") != ADMIN_PASSWORD:
+        return admin_login("Unauthorized")
+    try:
+        index = int(request.form.get("restore_index", 0))
+        prompts = load_prompts()
+        history = prompts.get("version_history", [])
+        if index < len(history):
+            restored = history[index]["prompts"]
+            restored["version_history"] = history
+            save_prompts(restored)
+        return admin_studio(load_prompts())
+    except Exception as e:
+        return admin_login(f"Restore failed: {str(e)}")
 
-@app.route("/admin/test", methods=["POST"])
-def test_reading():
-    if not verify_admin(request):
-        return jsonify({"error": "unauthorized"}), 401
+@app.route("/admin/test-reading", methods=["GET"])
+def admin_test_reading():
     try:
         birth_data = {
-            "date": "1978-10-06",
-            "time": "20:40",
-            "lat": 28.6139,
-            "lon": 77.209,
-            "utc_offset": 5.5
+            "date": "1978-10-06", "time": "20:40",
+            "lat": 28.6139, "lon": 77.209, "utc_offset": 5.5
         }
         vedic_result = get_vedic_context(birth_data)
         if "error" in vedic_result:
-            return jsonify({"error": vedic_result["error"]}), 500
+            return f"<pre>Chart error: {vedic_result['error']}</pre>"
 
         vedic_context = vedic_result.get("karmi_prompt_context") or str(vedic_result)
         transit_result = get_today_transits()
@@ -936,60 +923,83 @@ def test_reading():
 
         agent_types = ["career", "relationships", "wealth", "timing"]
         agent_results = []
-        preference = "plain"
 
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = {
                 executor.submit(
                     call_agent, agent_type, "Sumit",
-                    "Testing the prompt studio",
-                    "How is my overall chart looking right now?",
+                    "Testing prompt studio",
+                    "How is my overall chart right now?",
                     "Next 3 months",
-                    vedic_context, transit_context, preference
+                    vedic_context, transit_context, "plain"
                 ): agent_type
                 for agent_type in agent_types
             }
             for future in as_completed(futures):
                 agent_results.append(future.result())
 
-        order = ["career", "relationships", "wealth", "timing"]
-        agent_results.sort(key=lambda x: order.index(x.get("domain", "career")))
+        order = ["career","relationships","wealth","timing"]
+        agent_results.sort(key=lambda x: order.index(x.get("domain","career")))
 
         synthesis_prompt = build_synthesis_prompt(
             "Sumit", "Testing prompt studio",
-            "How is my overall chart looking right now?",
-            "Next 3 months", agent_results, preference
+            "How is my overall chart right now?",
+            "Next 3 months", agent_results, "plain"
         )
         message = client.messages.create(
-            model="claude-haiku-4-5",
-            max_tokens=1024,
-            messages=[{"role": "user", "content": synthesis_prompt}]
+            model="claude-haiku-4-5", max_tokens=1024,
+            messages=[{"role":"user","content":synthesis_prompt}]
         )
         raw = message.content[0].text
         if raw.startswith("```"):
             raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
+            if raw.startswith("json"): raw = raw[4:]
         synthesis = json.loads(raw.strip())
-        return jsonify({"success": True, "synthesis": synthesis, "agents": agent_results})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
-@app.route("/admin/restore/<int:index>", methods=["POST"])
-def restore_version(index):
-    if not verify_admin(request):
-        return jsonify({"error": "unauthorized"}), 401
-    try:
-        prompts = load_prompts()
-        history = prompts.get("version_history", [])
-        if index < len(history):
-            restored = history[index]["prompts"]
-            restored["version_history"] = history
-            save_prompts(restored)
-            return jsonify({"success": True})
-        return jsonify({"success": False, "error": "Version not found"})
+        result_html = f"""<!DOCTYPE html>
+<html>
+<head><title>Test Result</title>
+<style>
+body {{ background:#07071A; color:#F0EBE0; font-family:system-ui,sans-serif; padding:40px; max-width:800px; margin:0 auto; }}
+h2 {{ color:#C9A84C; margin-bottom:20px; font-weight:400; }}
+.card {{ background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:20px; margin-bottom:16px; }}
+.label {{ font-size:10px; letter-spacing:0.2em; color:#3D9E8C; text-transform:uppercase; margin-bottom:8px; }}
+p {{ font-size:14px; line-height:1.7; color:rgba(240,235,224,0.8); }}
+.score {{ font-size:32px; color:#C9A84C; font-family:Georgia,serif; }}
+.agent {{ border-left:2px solid rgba(201,168,76,0.3); padding-left:16px; margin-bottom:12px; }}
+.agent-title {{ font-size:12px; font-weight:500; color:#C9A84C; margin-bottom:4px; }}
+</style>
+</head>
+<body>
+<h2>Test Reading — Sumit's Chart</h2>
+<div class="card">
+  <div class="label">Overall Score</div>
+  <div class="score">{synthesis.get('overall_score',0)}%</div>
+</div>
+<div class="card">
+  <div class="label">Synthesis</div>
+  <p>{synthesis.get('synthesis','')}</p>
+</div>
+<div class="card">
+  <div class="label">Top Action</div>
+  <p>{synthesis.get('top_action','')}</p>
+</div>
+<div class="card">
+  <div class="label">Oracle Note</div>
+  <p><em>{synthesis.get('oracle_note','')}</em></p>
+</div>
+<div class="card">
+  <div class="label">Agent Scores</div>
+  {''.join(f'<div class="agent"><div class="agent-title">{a.get("domain","").upper()} — {a.get("score",0)}%</div><p>{a.get("verdict","")}</p></div>' for a in agent_results)}
+</div>
+<p style="margin-top:20px;font-size:12px;color:rgba(240,235,224,0.3)"><a href="/admin" style="color:#3D9E8C">← Back to Prompt Studio</a></p>
+</body>
+</html>"""
+        return result_html
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        return f"<pre style='color:#ff6b6b'>Error: {str(e)}\n{traceback.format_exc()}</pre>"
 
 if __name__ == "__main__":
     import os
