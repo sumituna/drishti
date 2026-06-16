@@ -61,8 +61,16 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-function shouldShowTheme(theme) {
-  return theme && theme !== 'Theme coming soon';
+function formatDashaEnd(end) {
+  if (!end) return '—';
+  try {
+    const d = new Date(end);
+    if (Number.isNaN(d.getTime())) return String(end);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  } catch {
+    return String(end);
+  }
 }
 
 function scoreToBandBar(score) {
@@ -141,6 +149,11 @@ function parseChartResponse(chart, form) {
   const rising = asc.sign || '—';
   const moon = (planets.Moon || {}).sign || '—';
   const sun = (planets.Sun || {}).sign || '—';
+  const karakas = chart.karakas || {};
+  const atmakaraka = karakas.Atmakaraka || '—';
+  const currentPeriod = dasha.path || [dasha.mahas, dasha.antar, dasha.pratyantar].filter(Boolean).join(' / ') || '—';
+  const mahaEnd = formatDashaEnd((dasha.current_maha || {}).end);
+
   const mahaLord = dasha.mahas || (dasha.current_maha || {}).lord || '—';
 
   const context = chart.karmi_context || chart.karmi_prompt_context || '';
@@ -166,8 +179,10 @@ function parseChartResponse(chart, form) {
       rising,
       moon,
       sun,
+      atmakaraka,
+      current_period: currentPeriod,
+      maha_end: mahaEnd,
     },
-    theme: 'Theme coming soon',
     mahadasha: {
       lord: mahaLord,
       theme_line: MD_THEMES[mahaLord] || 'Your current planetary chapter unfolds.',
@@ -258,17 +273,9 @@ function showPackResults(data) {
   document.getElementById('result-rising').textContent = ident.rising || '—';
   document.getElementById('result-moon').textContent = ident.moon || '—';
   document.getElementById('result-sun').textContent = ident.sun || '—';
-
-  const themeEl = document.getElementById('result-theme');
-  if (themeEl) {
-    if (shouldShowTheme(data.theme)) {
-      themeEl.textContent = data.theme;
-      themeEl.classList.remove('hidden');
-    } else {
-      themeEl.textContent = '';
-      themeEl.classList.add('hidden');
-    }
-  }
+  document.getElementById('result-atmakaraka').textContent = ident.atmakaraka || '—';
+  document.getElementById('result-current-period').textContent = ident.current_period || '—';
+  document.getElementById('result-maha-end').textContent = ident.maha_end || '—';
 
   const md = data.mahadasha || {};
   document.getElementById('result-md-line').textContent =
@@ -325,22 +332,10 @@ function renderYogas(yogas, total) {
 function renderShareCard(data) {
   const ident = data.identity || {};
   const md = data.mahadasha || {};
-  const line = `${ident.rising} Rising · ${ident.moon} Moon · ${md.lord} Mahadasha`;
+  const line = `${ident.rising} Rising · ${ident.moon} Moon · AK ${ident.atmakaraka} · ${md.lord} Mahadasha`;
   document.getElementById('share-line').textContent = line;
 
-  const shareThemeEl = document.getElementById('share-theme');
-  if (shareThemeEl) {
-    if (shouldShowTheme(data.theme)) {
-      shareThemeEl.textContent = data.theme;
-      shareThemeEl.classList.remove('hidden');
-    } else {
-      shareThemeEl.textContent = '';
-      shareThemeEl.classList.add('hidden');
-    }
-  }
-
-  const themeForShare = shouldShowTheme(data.theme) ? data.theme : '';
-  const shareText = `${line}${themeForShare ? '\n' + themeForShare : ''}\n\nGet your chart pack: https://karmi.ai/pack`;
+  const shareText = `${line}\n\nGet your chart pack: https://karmi.ai/pack`;
   const wa = document.getElementById('whatsapp-link');
   if (wa) {
     wa.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
@@ -358,21 +353,41 @@ function copyShareText() {
   });
 }
 
-function downloadFreePack() {
+async function downloadFreePack() {
   if (!lastForm) {
     alert('Generate your chart pack first.');
     return;
   }
-  const q = new URLSearchParams({
-    name: lastForm.name,
-    date: lastForm.date,
-    time: lastForm.time,
-    place: lastForm.place,
-    lat: lastForm.lat,
-    lon: lastForm.lon,
-    timezone: lastForm.timezone,
-  });
-  window.location.href = `${PACK_API}/download-free-pack?${q.toString()}`;
+  try {
+    const res = await fetch(`${PACK_API}/download-free-pack`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: lastForm.name,
+        date: lastForm.date,
+        time: lastForm.time,
+        place: lastForm.place,
+        lat: lastForm.lat,
+        lon: lastForm.lon,
+        utc_offset: lastForm.timezone,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Download failed');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${lastForm.name.replace(/[^\w\-]/g, '_') || 'chart'}_karmi_free.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert(err.message || 'Could not download chart pack.');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', prefillFromUrl);

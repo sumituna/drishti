@@ -30,7 +30,7 @@ def save_prompts(prompts):
     except Exception:
         return False
 
-from chart_pack import build_free_pack, build_free_md
+from chart_pack import extract_free_pack, build_free_md
 
 app = Flask(__name__)
 CORS(app)
@@ -75,6 +75,17 @@ def fetch_chart_from_engine(birth_data):
         return response.json()
     except Exception as e:
         return {"error": str(e)}
+
+def get_chart(body):
+    """Fetch raw chart JSON from the Vedic computation engine."""
+    birth_data = {
+        "date": body.get("date"),
+        "time": body.get("time", "00:00"),
+        "lat": body.get("lat"),
+        "lon": body.get("lon"),
+        "utc_offset": body.get("utc_offset") or body.get("timezone", 5.5),
+    }
+    return fetch_chart_from_engine(birth_data)
 
 def get_vedic_context(birth_data):
     try:
@@ -629,65 +640,47 @@ def ask_v2():
         "relationship_subscores": relationship_subscores
     })
 
-def _pack_birth_payload(data):
-    return {
-        "date": data.get("date"),
-        "time": data.get("time", "00:00"),
-        "lat": data.get("lat"),
-        "lon": data.get("lon"),
-        "utc_offset": data.get("timezone") or data.get("utc_offset", 5.5),
-    }
+def _validate_pack_body(data):
+    if not data.get("date") or not data.get("time"):
+        return "Missing birth date or time"
+    if not data.get("lat") or not data.get("lon"):
+        return "Missing lat/lon — select birth place from geocode"
+    return None
 
 @app.route("/generate-free-pack", methods=["POST"])
 def generate_free_pack():
     try:
-        data = request.json or {}
-        name = (data.get("name") or "Seeker").strip()
-        date = data.get("date")
-        time = data.get("time", "00:00")
-        place = (data.get("place") or "").strip()
+        body = request.json or {}
+        err = _validate_pack_body(body)
+        if err:
+            return jsonify({"error": err}), 400
 
-        if not date or not time or not place:
-            return jsonify({"error": "Missing birth date, time, or place"}), 400
-        if not data.get("lat") or not data.get("lon"):
-            return jsonify({"error": "Birth place must be selected from geocode dropdown"}), 400
-
-        chart = fetch_chart_from_engine(_pack_birth_payload(data))
+        chart = get_chart(body)
         if "error" in chart:
             return jsonify({"error": chart["error"]}), 500
 
-        pack = build_free_pack(chart, name, date, time, place)
-        return jsonify(pack)
+        pack = extract_free_pack(chart, body)
+        response = {k: v for k, v in pack.items() if k != "_meta"}
+        return jsonify(response)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/download-free-pack", methods=["GET"])
+@app.route("/download-free-pack", methods=["POST"])
 def download_free_pack():
     try:
-        data = request.args
-        name = (data.get("name") or "Seeker").strip()
-        date = data.get("date")
-        time = data.get("time", "00:00")
-        place = (data.get("place") or "").strip()
+        body = request.json or {}
+        err = _validate_pack_body(body)
+        if err:
+            return jsonify({"error": err}), 400
 
-        if not date or not time or not place:
-            return jsonify({"error": "Missing birth parameters"}), 400
-        if not data.get("lat") or not data.get("lon"):
-            return jsonify({"error": "Missing lat/lon"}), 400
-
-        chart = fetch_chart_from_engine({
-            "date": date,
-            "time": time,
-            "lat": data.get("lat"),
-            "lon": data.get("lon"),
-            "utc_offset": data.get("timezone") or data.get("utc_offset", 5.5),
-        })
+        chart = get_chart(body)
         if "error" in chart:
             return jsonify({"error": chart["error"]}), 500
 
-        pack = build_free_pack(chart, name, date, time, place)
+        pack = extract_free_pack(chart, body)
         md_content = build_free_md(pack)
 
+        name = (body.get("name") or "Seeker").strip()
         safe_name = re.sub(r"[^\w\-]", "_", name)[:40] or "chart"
         filename = f"{safe_name}_karmi_free.md"
 

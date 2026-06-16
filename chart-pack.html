@@ -124,7 +124,7 @@
       <div class="form-card pack-result-card pack-identity-card">
         <p class="pack-identity-name" id="result-name"></p>
         <p class="pack-identity-birth" id="result-birth"></p>
-        <div class="pack-triplet">
+        <div class="pack-identity-grid">
           <div class="pack-triplet-item">
             <span class="pack-triplet-label">RISING</span>
             <span class="pack-triplet-value" id="result-rising"></span>
@@ -137,8 +137,19 @@
             <span class="pack-triplet-label">SUN</span>
             <span class="pack-triplet-value" id="result-sun"></span>
           </div>
+          <div class="pack-triplet-item">
+            <span class="pack-triplet-label">ATMAKARAKA</span>
+            <span class="pack-triplet-value" id="result-atmakaraka"></span>
+          </div>
+          <div class="pack-triplet-item">
+            <span class="pack-triplet-label">CURRENT PERIOD</span>
+            <span class="pack-triplet-value pack-triplet-value-sm" id="result-current-period"></span>
+          </div>
+          <div class="pack-triplet-item">
+            <span class="pack-triplet-label">MAHADASHA ENDS</span>
+            <span class="pack-triplet-value pack-triplet-value-sm" id="result-maha-end"></span>
+          </div>
         </div>
-        <p class="pack-theme-line" id="result-theme"></p>
       </div>
 
       <div class="form-card pack-result-card">
@@ -171,7 +182,6 @@
       <div class="form-card pack-result-card pack-share-card">
         <div class="pack-share-title">✦ Share Your Chart Identity</div>
         <p class="pack-share-line" id="share-line"></p>
-        <p class="pack-share-theme" id="share-theme"></p>
         <div class="pack-share-btns">
           <button type="button" class="pack-btn-outline" onclick="copyShareText()">Copy Text</button>
           <a id="whatsapp-link" class="pack-btn-outline" href="#" target="_blank" rel="noopener">Share on WhatsApp</a>

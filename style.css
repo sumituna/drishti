@@ -1429,6 +1429,18 @@ footer a { color: var(--gold); text-decoration: none; }
   margin-bottom: 24px;
 }
 
+.pack-identity-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px 16px;
+  margin-bottom: 0;
+}
+
+.pack-triplet-value-sm {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
 .pack-triplet-label {
   display: block;
   font-size: 9px;
@@ -1442,14 +1454,6 @@ footer a { color: var(--gold); text-decoration: none; }
   font-size: 22px;
   font-weight: 300;
   color: var(--text);
-}
-
-.pack-theme-line {
-  font-family: var(--serif);
-  font-size: 18px;
-  font-style: italic;
-  color: var(--gold);
-  line-height: 1.4;
 }
 
 .pack-result-heading {
@@ -1597,14 +1601,6 @@ footer a { color: var(--gold); text-decoration: none; }
 .pack-share-line {
   font-size: 14px;
   color: var(--text);
-  margin-bottom: 8px;
-}
-
-.pack-share-theme {
-  font-family: var(--serif);
-  font-size: 15px;
-  font-style: italic;
-  color: var(--text-dim);
   margin-bottom: 16px;
 }
 
@@ -1646,6 +1642,7 @@ footer a { color: var(--gold); text-decoration: none; }
   }
   .pack-compare-grid { grid-template-columns: 1fr; }
   .pack-triplet { grid-template-columns: 1fr; gap: 20px; }
+  .pack-identity-grid { grid-template-columns: 1fr; gap: 20px; }
   .pack-domain-row {
     grid-template-columns: 1fr;
     gap: 8px;
