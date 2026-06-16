@@ -86,6 +86,14 @@ def get_chart(body):
         return {"error": str(e)}
 
 
+def _scalar(val) -> str:
+    if val is None:
+        return ""
+    if isinstance(val, dict):
+        return str(val.get("planet") or val.get("lord") or val.get("sign") or "")
+    return str(val)
+
+
 def _format_date(end) -> str:
     if not end:
         return "—"
@@ -143,6 +151,20 @@ def parse_domains_from_context(context: str) -> dict:
     return domains
 
 
+def _ensure_domain_scores(domain_scores: dict) -> dict:
+    """Always return all 6 domains with band and note."""
+    normalized = {}
+    for key in DOMAIN_KEYS:
+        entry = domain_scores.get(key) if domain_scores else None
+        if not isinstance(entry, dict):
+            entry = {}
+        normalized[key] = {
+            "band": entry.get("band") or "moderate",
+            "note": entry.get("note") or "",
+        }
+    return normalized
+
+
 def _yoga_rank(yoga: dict) -> int:
     eff = (yoga.get("effective_strength") or yoga.get("strength") or "medium").lower()
     return YOGA_RANK.get(eff, 1)
@@ -169,22 +191,20 @@ def extract_free_pack(chart: dict, body: dict) -> dict:
     planets = chart.get("planets") or {}
     dasha = chart.get("dasha") or {}
     karakas = chart.get("karakas") or {}
+    current_maha = dasha.get("current_maha") or {}
+    current_antar = dasha.get("current_antar") or {}
 
     rising = asc.get("sign", "")
     moon = (planets.get("Moon") or {}).get("sign", "")
     sun = (planets.get("Sun") or {}).get("sign", "")
-    atmakaraka = karakas.get("Atmakaraka", "")
-
-    maha_lord = dasha.get("mahas") or (dasha.get("current_maha") or {}).get("lord", "")
-    maha_end = _format_date((dasha.get("current_maha") or {}).get("end"))
-    antar_lord = dasha.get("antar") or (dasha.get("current_antar") or {}).get("lord", "")
-    antar_end = _format_date((dasha.get("current_antar") or {}).get("end"))
+    atmakaraka = _scalar(karakas.get("Atmakaraka"))
+    maha_lord = _scalar(dasha.get("mahas"))
+    maha_end = _format_date(current_maha.get("end"))
+    antar_lord = _scalar(dasha.get("antar"))
+    antar_end = _format_date(current_antar.get("end"))
 
     context = chart.get("karmi_context") or chart.get("karmi_prompt_context") or ""
-    domain_scores = parse_domains_from_context(context)
-    for key in DOMAIN_KEYS:
-        if key not in domain_scores:
-            domain_scores[key] = {"band": "moderate", "note": ""}
+    domain_scores = _ensure_domain_scores(parse_domains_from_context(context))
 
     top_yogas, total_yoga_count = extract_top_yogas(chart)
 

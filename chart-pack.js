@@ -25,6 +25,63 @@ const DOMAIN_API_MAP = {
   travel: 'travel',
 };
 
+const BAND_BARS = {
+  high: 8,
+  moderate: 5,
+  low: 3,
+  very_low: 1,
+};
+
+function scalarVal(val) {
+  if (val == null || val === '') return '';
+  if (typeof val === 'object') return val.planet || val.lord || val.sign || '';
+  return String(val);
+}
+
+function barCountForDomain(d) {
+  if (typeof d.bar === 'number' && !Number.isNaN(d.bar)) return d.bar;
+  return BAND_BARS[d.band] ?? 5;
+}
+
+function mapPackResponse(pack, form) {
+  const mahaLord = scalarVal(pack.maha_lord) || '—';
+  const antarLord = scalarVal(pack.antar_lord) || '—';
+  const currentPeriod = [mahaLord, antarLord].filter(v => v && v !== '—').join(' / ') || '—';
+
+  const domainScores = {};
+  DOMAIN_ORDER.forEach(key => {
+    const d = (pack.domain_scores || {})[key] || { band: 'moderate', note: '' };
+    const band = d.band || 'moderate';
+    domainScores[key] = {
+      band,
+      bar: barCountForDomain({ band, bar: d.bar }),
+      note: d.note || '',
+    };
+  });
+
+  return {
+    identity: {
+      name: form.name,
+      birth_details: formatBirthDetails(form.name, form.date, form.time, form.place),
+      rising: pack.rising || '—',
+      moon: pack.moon || '—',
+      sun: pack.sun || '—',
+      atmakaraka: scalarVal(pack.atmakaraka) || '—',
+      current_period: currentPeriod,
+      maha_end: pack.maha_end || '—',
+    },
+    mahadasha: {
+      lord: mahaLord,
+    },
+    domain_scores: domainScores,
+    top_yogas: (pack.top_yogas || []).map(y => ({
+      name: y.name,
+      effect: y.desc || '',
+    })),
+    total_yoga_count: pack.total_yoga_count || 0,
+  };
+}
+
 const BAND_LABELS = {
   high: 'High',
   moderate: 'Moderate',
@@ -34,18 +91,6 @@ const BAND_LABELS = {
 };
 
 const YOGA_STRENGTH_RANK = { high: 0, medium: 1, low: 2, challenging: 3 };
-
-const MD_THEMES = {
-  Sun: 'The soul steps into its authority',
-  Moon: 'The heart learns what it truly needs',
-  Mars: 'Energy seeks its right direction',
-  Mercury: 'The mind sharpens its true purpose',
-  Jupiter: 'Wisdom expands into new territory',
-  Venus: 'Beauty and harmony take centre stage',
-  Saturn: 'The great teacher demands accountability',
-  Rahu: 'Ambition meets the unknown',
-  Ketu: 'The past releases what no longer serves',
-};
 
 function stripNoteTechnical(note) {
   if (!note) return '';
@@ -150,11 +195,13 @@ function parseChartResponse(chart, form) {
   const moon = (planets.Moon || {}).sign || '—';
   const sun = (planets.Sun || {}).sign || '—';
   const karakas = chart.karakas || {};
-  const atmakaraka = karakas.Atmakaraka || '—';
-  const currentPeriod = dasha.path || [dasha.mahas, dasha.antar, dasha.pratyantar].filter(Boolean).join(' / ') || '—';
+  const atmakaraka = scalarVal(karakas.Atmakaraka) || '—';
+  const mahaLord = scalarVal(dasha.mahas) || '—';
+  const antarLord = scalarVal(dasha.antar) || '—';
+  const currentPeriod = dasha.path
+    || [mahaLord, antarLord, scalarVal(dasha.pratyantar)].filter(v => v && v !== '—').join(' / ')
+    || '—';
   const mahaEnd = formatDashaEnd((dasha.current_maha || {}).end);
-
-  const mahaLord = dasha.mahas || (dasha.current_maha || {}).lord || '—';
 
   const context = chart.karmi_context || chart.karmi_prompt_context || '';
   const domainScores = parseDomainsFromContext(context);
@@ -185,7 +232,6 @@ function parseChartResponse(chart, form) {
     },
     mahadasha: {
       lord: mahaLord,
-      theme_line: MD_THEMES[mahaLord] || 'Your current planetary chapter unfolds.',
     },
     domain_scores: domainScores,
     top_yogas: topYogas,
@@ -228,32 +274,31 @@ async function generateChartPack() {
     timezone: resolvedTimezone,
   };
 
-  const [year, month, day] = dob.split('-').map(Number);
-  const [hour, minute] = tob.split(':').map(Number);
-  const enginePayload = {
-    year, month, day, hour, minute,
-    lat: resolvedLat,
-    lon: resolvedLon,
-    utc_offset: resolvedTimezone,
-  };
-
   const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Generating…';
 
   try {
-    const res = await fetch(VEDIC_ENGINE_URL, {
+    const res = await fetch(`${PACK_API}/generate-free-pack`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
-      },
-      body: JSON.stringify(enginePayload),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        date: dob,
+        time: tob,
+        place,
+        lat: resolvedLat,
+        lon: resolvedLon,
+        utc_offset: resolvedTimezone,
+      }),
     });
-    const chart = await res.json();
-    if (!res.ok) throw new Error(chart.error || 'Chart computation failed');
+    const pack = await res.json();
+    console.log('[generate-free-pack] full API response:', pack);
+    console.log('[generate-free-pack] domain_scores:', pack.domain_scores);
+    if (!res.ok) throw new Error(pack.error || 'Chart computation failed');
 
-    packData = parseChartResponse(chart, lastForm);
+    packData = mapPackResponse(pack, lastForm);
+    console.log('[generate-free-pack] mapped domain_scores:', packData.domain_scores);
     showPackResults(packData);
   } catch (err) {
     alert(err.message || 'Could not generate chart pack. Please try again.');
@@ -277,10 +322,6 @@ function showPackResults(data) {
   document.getElementById('result-current-period').textContent = ident.current_period || '—';
   document.getElementById('result-maha-end').textContent = ident.maha_end || '—';
 
-  const md = data.mahadasha || {};
-  document.getElementById('result-md-line').textContent =
-    `${md.lord || '—'} Mahadasha · ${md.theme_line || ''}`;
-
   renderDomainBars(data.domain_scores || {});
   renderYogas(data.top_yogas || [], data.total_yoga_count || 0);
   renderShareCard(data);
@@ -288,11 +329,16 @@ function showPackResults(data) {
 
 function renderDomainBars(scores) {
   const el = document.getElementById('domain-bars');
-  if (!el) return;
+  if (!el) {
+    console.warn('[renderDomainBars] #domain-bars element not found');
+    return;
+  }
+
+  console.log('[renderDomainBars] scores:', scores);
 
   el.innerHTML = DOMAIN_ORDER.map(key => {
-    const d = scores[key] || { bar: 5, band: 'moderate', note: '' };
-    const bar = Math.min(10, Math.max(0, d.bar || 5));
+    const d = scores[key] || { band: 'moderate', note: '' };
+    const bar = Math.min(10, Math.max(0, barCountForDomain(d)));
     const cells = Array.from({ length: 10 }, (_, i) =>
       `<span class="pack-bar-cell${i < bar ? ' filled' : ''}"></span>`
     ).join('');
