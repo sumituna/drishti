@@ -12,6 +12,8 @@
   <div class="stars" id="stars"></div>
   <div class="stars-2" id="stars2"></div>
 
+  <div class="pack-container">
+
   <nav class="pack-nav">
     <a href="https://karmi.ai" class="pack-logo">KARMI.AI</a>
     <a href="index.html" class="pack-nav-link">Ask Drishti →</a>
@@ -35,15 +37,18 @@
       <section class="pack-steps">
         <div class="pack-step">
           <span class="pack-step-num">①</span>
-          <span class="pack-step-text">Enter birth details · 60 seconds</span>
+          <span class="pack-step-title">Enter birth details</span>
+          <span class="pack-step-sub">60 seconds</span>
         </div>
         <div class="pack-step">
           <span class="pack-step-num">②</span>
-          <span class="pack-step-text">See your chart glimpse · Free, instant</span>
+          <span class="pack-step-title">See your chart glimpse</span>
+          <span class="pack-step-sub">Free, instant</span>
         </div>
         <div class="pack-step">
           <span class="pack-step-num">③</span>
-          <span class="pack-step-text">Download free or unlock full · ₹199 once</span>
+          <span class="pack-step-title">Download free or unlock full</span>
+          <span class="pack-step-sub">₹199 once</span>
         </div>
       </section>
 
@@ -84,7 +89,7 @@
 
       <section class="pack-comparison">
         <div class="pack-compare-grid">
-          <div class="form-card pack-compare-col">
+          <div class="reader-card pack-compare-col">
             <div class="pack-compare-label">FREE PACK</div>
             <ul class="pack-compare-list">
               <li>Chart identity — Rising, Moon, Sun</li>
@@ -94,9 +99,9 @@
               <li>Shareable identity card</li>
               <li>Basic .md download for any AI</li>
             </ul>
-            <button type="button" class="pack-btn-outline" disabled>Included free</button>
+            <button type="button" class="pack-btn-outline pack-compare-cta" onclick="document.querySelector('.pack-form-section').scrollIntoView({behavior:'smooth'})">Generate Free →</button>
           </div>
-          <div class="form-card pack-compare-col pack-compare-full">
+          <div class="reader-card pack-compare-col pack-compare-full">
             <div class="pack-compare-label">FULL PACK</div>
             <ul class="pack-compare-list">
               <li>Everything in Free Pack</li>
@@ -107,7 +112,7 @@
               <li>D9 relationship + D10 career analysis</li>
               <li>AI master prompt file — ready to upload</li>
             </ul>
-            <button type="button" class="pack-btn-outline" disabled>₹199 · one-time</button>
+            <button type="button" class="ask-btn pack-compare-cta" onclick="window.open('https://karmi.ai/pack','_blank')">Unlock Full Pack → ₹199</button>
           </div>
         </div>
       </section>
@@ -186,6 +191,8 @@
   <footer>
     <p>Chart Pack by <a href="https://karmi.ai">Karmi.ai</a> · <a href="index.html">Ask Drishti →</a></p>
   </footer>
+
+  </div>
 
   <script src="app.js"></script>
   <script src="chart-pack.js"></script>

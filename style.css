@@ -1213,13 +1213,21 @@ footer a { color: var(--gold); text-decoration: none; }
 }
 
 /* ── Chart Pack Page ── */
+.pack-container {
+  position: relative;
+  z-index: 10;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
 .pack-nav {
   position: relative;
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 40px;
+  padding: 20px 0;
 }
 
 .pack-logo {
@@ -1251,32 +1259,43 @@ footer a { color: var(--gold); text-decoration: none; }
 
 .pack-main {
   position: relative;
-  z-index: 10;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 0 40px 80px;
+  padding: 0 0 80px;
 }
 
 .pack-steps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  display: flex;
+  gap: 2rem;
   margin-bottom: 48px;
+}
+
+.pack-step {
+  flex: 1;
   text-align: center;
 }
 
 .pack-step-num {
   display: block;
   font-family: var(--serif);
-  font-size: 28px;
+  font-size: 40px;
   color: var(--gold);
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  line-height: 1;
 }
 
-.pack-step-text {
+.pack-step-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.pack-step-sub {
+  display: block;
   font-size: 13px;
   color: var(--text-dim);
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .pack-form-heading {
@@ -1300,6 +1319,27 @@ footer a { color: var(--gold); text-decoration: none; }
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
+  align-items: stretch;
+}
+
+.pack-compare-col {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+  padding: 24px;
+}
+
+.pack-compare-col:hover {
+  border-color: rgba(201,168,76,0.2);
+}
+
+.pack-compare-cta {
+  margin-top: auto;
+  width: 100%;
+}
+
+.pack-compare-col .ask-btn.pack-compare-cta {
+  margin-top: auto;
 }
 
 .pack-compare-label {
@@ -1568,9 +1608,12 @@ footer a { color: var(--gold); text-decoration: none; }
 }
 
 @media (max-width: 700px) {
-  .pack-nav { padding: 20px; }
-  .pack-main { padding: 0 20px 60px; }
-  .pack-steps { grid-template-columns: 1fr; gap: 24px; }
+  .pack-container { padding: 0 20px; }
+  .pack-nav { padding: 20px 0; }
+  .pack-steps {
+    flex-direction: column;
+    gap: 2rem;
+  }
   .pack-compare-grid { grid-template-columns: 1fr; }
   .pack-triplet { grid-template-columns: 1fr; gap: 20px; }
   .pack-domain-row {

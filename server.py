@@ -39,7 +39,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 NGROK_URL = os.getenv("NGROK_URL")
 VEDIC_ENGINE_URL = os.environ.get(
     "VEDIC_ENGINE_URL",
-    "https://mocha-editor-monogamy.ngrok-free.app",
+    "https://mocha-editor-monogamy.ngrok-free.dev",
 ).rstrip("/")
 # Chart computation path on the engine (override to /chart-free when available)
 VEDIC_ENGINE_CHART_PATH = os.environ.get("VEDIC_ENGINE_CHART_PATH", "/api/vedic-native")
