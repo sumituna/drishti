@@ -30,7 +30,7 @@ def save_prompts(prompts):
     except Exception:
         return False
 
-from chart_pack import extract_free_pack, build_free_md
+from chart_pack import extract_free_pack, build_free_md, get_chart
 
 app = Flask(__name__)
 CORS(app)
@@ -45,47 +45,6 @@ VEDIC_ENGINE_URL = os.environ.get(
 VEDIC_ENGINE_CHART_PATH = os.environ.get("VEDIC_ENGINE_CHART_PATH", "/api/vedic-native")
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-
-def _birth_to_engine_payload(birth_data):
-    date_str = birth_data.get("date", "")
-    time_str = birth_data.get("time", "00:00")
-    year, month, day = [int(x) for x in date_str.split("-")]
-    hour, minute = [int(x) for x in time_str.split(":")]
-    return {
-        "year": year, "month": month, "day": day,
-        "hour": hour, "minute": minute,
-        "lat": float(birth_data.get("lat", 28.6139)),
-        "lon": float(birth_data.get("lon", 77.209)),
-        "utc_offset": float(birth_data.get("utc_offset", 5.5)),
-    }
-
-def fetch_chart_from_engine(birth_data):
-    """POST birth data to the remote Vedic computation engine via HTTP."""
-    try:
-        if not VEDIC_ENGINE_URL:
-            return {"error": "VEDIC_ENGINE_URL not configured"}
-        payload = _birth_to_engine_payload(birth_data)
-        url = f"{VEDIC_ENGINE_URL}{VEDIC_ENGINE_CHART_PATH}"
-        headers = {
-            "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "true",
-        }
-        response = requests.post(url, json=payload, headers=headers, timeout=45)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        return {"error": str(e)}
-
-def get_chart(body):
-    """Fetch raw chart JSON from the Vedic computation engine."""
-    birth_data = {
-        "date": body.get("date"),
-        "time": body.get("time", "00:00"),
-        "lat": body.get("lat"),
-        "lon": body.get("lon"),
-        "utc_offset": body.get("utc_offset") or body.get("timezone", 5.5),
-    }
-    return fetch_chart_from_engine(birth_data)
 
 def get_vedic_context(birth_data):
     try:

@@ -1,8 +1,16 @@
 """Free chart pack — extract data from Karmi vedic engine response."""
 
 import json
+import os
 import re
+import requests
 from datetime import datetime
+
+VEDIC_ENGINE_URL = os.environ.get(
+    "VEDIC_ENGINE_URL",
+    "https://mocha-editor-monogamy.ngrok-free.dev",
+).rstrip("/")
+VEDIC_ENGINE_CHART_PATH = os.environ.get("VEDIC_ENGINE_CHART_PATH", "/api/vedic-native")
 
 DOMAIN_KEYS = [
     "career", "relationships", "travel",
@@ -42,6 +50,40 @@ DOMAIN_LABELS = {
     "spirituality": "Spirituality",
     "travel": "Travel",
 }
+
+
+def get_chart(body):
+    """Fetch raw chart JSON from the Vedic computation engine."""
+    try:
+        if not VEDIC_ENGINE_URL:
+            return {"error": "VEDIC_ENGINE_URL not configured"}
+
+        date_str = body.get("date", "")
+        time_str = body.get("time", "00:00")
+        year, month, day = [int(x) for x in date_str.split("-")]
+        hour, minute = [int(x) for x in time_str.split(":")]
+
+        payload = {
+            "year": year,
+            "month": month,
+            "day": day,
+            "hour": hour,
+            "minute": minute,
+            "lat": float(body.get("lat", 28.6139)),
+            "lon": float(body.get("lon", 77.209)),
+            "utc_offset": float(body.get("utc_offset") or body.get("timezone", 5.5)),
+        }
+
+        url = f"{VEDIC_ENGINE_URL}{VEDIC_ENGINE_CHART_PATH}"
+        headers = {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+        }
+        response = requests.post(url, json=payload, headers=headers, timeout=45)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        return {"error": str(e)}
 
 
 def _format_date(end) -> str:
