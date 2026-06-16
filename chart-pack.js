@@ -47,6 +47,24 @@ const MD_THEMES = {
   Ketu: 'The past releases what no longer serves',
 };
 
+function stripNoteTechnical(note) {
+  if (!note) return '';
+  const idx = note.indexOf('[');
+  return (idx >= 0 ? note.slice(0, idx) : note).trim();
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function shouldShowTheme(theme) {
+  return theme && theme !== 'Theme coming soon';
+}
+
 function scoreToBandBar(score) {
   if (score >= 70) return { band: 'high', bar: 8 };
   if (score >= 45) return { band: 'moderate', bar: 5 };
@@ -75,7 +93,7 @@ function parseDomainsFromContext(context) {
     for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
       const tm = lines[j].match(triggerRe);
       if (tm) {
-        note = tm[1].trim();
+        note = stripNoteTechnical(tm[1].trim());
         if (note.toLowerCase() === 'none') note = '';
         break;
       }
@@ -96,7 +114,7 @@ function extractTopYogas(chart, limit = 3) {
   const yogas = chart.yogas || [];
   const ranked = [...yogas].sort((a, b) => yogaStrengthRank(a) - yogaStrengthRank(b));
   const top = ranked.slice(0, limit).map(y => ({
-    name: y.name || 'Yoga',
+    name: y.name,
     effect: y.desc || '',
     strength: y.effective_strength || y.strength || 'medium',
   }));
@@ -133,7 +151,13 @@ function parseChartResponse(chart, form) {
     }
   });
 
-  const { top: topYogas, total: totalYogaCount } = extractTopYogas(chart);
+  const topYogas = (chart.top_yogas && chart.top_yogas.length)
+    ? chart.top_yogas.slice(0, 3).map(y => ({
+        name: y.name,
+        effect: y.effect || y.desc || '',
+      }))
+    : extractTopYogas(chart).top;
+  const totalYogaCount = chart.total_yoga_count ?? (chart.yogas || []).length;
 
   return {
     identity: {
@@ -234,7 +258,17 @@ function showPackResults(data) {
   document.getElementById('result-rising').textContent = ident.rising || '—';
   document.getElementById('result-moon').textContent = ident.moon || '—';
   document.getElementById('result-sun').textContent = ident.sun || '—';
-  document.getElementById('result-theme').textContent = data.theme || '';
+
+  const themeEl = document.getElementById('result-theme');
+  if (themeEl) {
+    if (shouldShowTheme(data.theme)) {
+      themeEl.textContent = data.theme;
+      themeEl.classList.remove('hidden');
+    } else {
+      themeEl.textContent = '';
+      themeEl.classList.add('hidden');
+    }
+  }
 
   const md = data.mahadasha || {};
   document.getElementById('result-md-line').textContent =
@@ -256,7 +290,8 @@ function renderDomainBars(scores) {
       `<span class="pack-bar-cell${i < bar ? ' filled' : ''}"></span>`
     ).join('');
     const bandLabel = BAND_LABELS[d.band] || d.band;
-    const note = d.note ? `<span class="pack-domain-note">${d.note}</span>` : '';
+    const cleanNote = stripNoteTechnical(d.note);
+    const note = cleanNote ? `<span class="pack-domain-note">${escapeHtml(cleanNote)}</span>` : '';
     return `
       <div class="pack-domain-row">
         <span class="pack-domain-label">${DOMAIN_LABELS[key]}</span>
@@ -274,8 +309,8 @@ function renderYogas(yogas, total) {
 
   list.innerHTML = yogas.map(y => `
     <div class="pack-yoga-item">
-      <div class="pack-yoga-name">${y.name}</div>
-      <div class="pack-yoga-effect">${y.effect}</div>
+      <div class="pack-yoga-name">${escapeHtml(y.name || '')}</div>
+      <div class="pack-yoga-effect">${escapeHtml(y.effect || '')}</div>
     </div>
   `).join('');
 
@@ -292,9 +327,20 @@ function renderShareCard(data) {
   const md = data.mahadasha || {};
   const line = `${ident.rising} Rising · ${ident.moon} Moon · ${md.lord} Mahadasha`;
   document.getElementById('share-line').textContent = line;
-  document.getElementById('share-theme').textContent = data.theme || '';
 
-  const shareText = `${line}\n${data.theme || ''}\n\nGet your chart pack: https://karmi.ai/pack`;
+  const shareThemeEl = document.getElementById('share-theme');
+  if (shareThemeEl) {
+    if (shouldShowTheme(data.theme)) {
+      shareThemeEl.textContent = data.theme;
+      shareThemeEl.classList.remove('hidden');
+    } else {
+      shareThemeEl.textContent = '';
+      shareThemeEl.classList.add('hidden');
+    }
+  }
+
+  const themeForShare = shouldShowTheme(data.theme) ? data.theme : '';
+  const shareText = `${line}${themeForShare ? '\n' + themeForShare : ''}\n\nGet your chart pack: https://karmi.ai/pack`;
   const wa = document.getElementById('whatsapp-link');
   if (wa) {
     wa.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
